@@ -22,6 +22,8 @@ public final class DirectoryClientState {
     private DirectoryQuery pending;
     private DirectoryPage page;
     private DirectoryPage.Row selected;
+    private UUID favoriteMachine;
+    private boolean favoriteValue;
     private Bookmark restoring;
     private boolean restorePageRequested;
     private int restoredScroll;
@@ -62,22 +64,32 @@ public final class DirectoryClientState {
     public DirectoryTab tab() { return tab; }
     public String specialTabName() { return specialTabName; }
     public void setTab(DirectoryTab next, long now) {
-        if (closed || next == null || next == tab) return;
+        if (closed || favoriteChanging() || next == null || next == tab) return;
         restoring = null; tab = next; reset(now); staleRetries = 0;
     }
     public String status() { return status; }
     public DirectoryPage page() { return page; }
     public DirectoryPage.Row selected() { return selected; }
     public boolean waiting() { return dirty || pending != null; }
+    public boolean favoriteChanging() { return favoriteMachine != null || (pending != null && pending.favoriteMachine != null); }
     public void setSearch(String text, long now) {
-        if (closed || !DirectoryText.valid(text) || text.equals(search)) return;
+        if (closed || favoriteChanging() || !DirectoryText.valid(text) || text.equals(search)) return;
         restoring = null; search = text; reset(now + DEBOUNCE); staleRetries = 0;
     }
-    public void refresh(long now) { if (!closed) { restoring = null; reset(now); staleRetries = 0; } }
+    public void refresh(long now) { if (!closed && !favoriteChanging()) { restoring = null; reset(now); staleRetries = 0; } }
+    /** Queue one explicit set operation, keeping the verified world cursor until it is sent. */
+    public boolean changeFavorite(DirectoryPage rendered, DirectoryPage.Row row, long now) {
+        if (!select(rendered, row) || row.entry.machineId == null) return false;
+        favoriteMachine = row.entry.machineId; favoriteValue = !row.favorite;
+        restoring = null; pageNumber = 0; page = null; selected = null;
+        dirty = true; due = now; status = "loading"; staleRetries = 0;
+        return true;
+    }
     private void reset(long when) {
         worldId = null; revision = 0; pageNumber = 0; pending = null; page = null; selected = null;
         dirty = true; due = when; status = "loading";
         restorePageRequested = false; restoredScroll = 0;
+        favoriteMachine = null; favoriteValue = false;
     }
     public void turnPage(int direction, long now) {
         if (closed || waiting() || page == null || (direction != -1 && direction != 1)) return;
@@ -93,7 +105,9 @@ public final class DirectoryClientState {
         }
         if (!dirty || now - due < 0 || now - nextSend < 0) return null;
         if (sequence == Long.MAX_VALUE) { close(); return null; }
-        pending = new DirectoryQuery(screenId, ++sequence, dimension, pageNumber, worldId, revision, search, tab);
+        pending = new DirectoryQuery(screenId, ++sequence, dimension, pageNumber, worldId, revision, search, tab,
+                favoriteMachine, favoriteValue);
+        favoriteMachine = null; favoriteValue = false;
         deadline = now + TIMEOUT; nextSend = now + SPACING; dirty = false;
         return pending;
     }
@@ -102,6 +116,8 @@ public final class DirectoryClientState {
                 || response.query.requestId != pending.requestId || response.query.playerDimension != dimension
                 || response.query.tab != tab || !response.query.search.equals(search) || response.query.page != pageNumber
                 || !java.util.Objects.equals(response.query.expectedWorld, pending.expectedWorld)
+                || !java.util.Objects.equals(response.query.favoriteMachine, pending.favoriteMachine)
+                || response.query.favoriteValue != pending.favoriteValue
                 || response.query.expectedRevision != pending.expectedRevision) return false;
         pending = null; selected = null; specialTabName = response.specialTabName;
         if (response.result == DirectoryPage.Result.OK) {
@@ -122,6 +138,8 @@ public final class DirectoryClientState {
                 restoredScroll = restoring.scroll; restoring = null;
             }
             status = response.total == 0 ? "empty" : "ready"; staleRetries = 0;
+        } else if (response.result == DirectoryPage.Result.STALE && response.query.favoriteMachine != null) {
+            page = null; status = "favorite_stale";
         } else if (response.result == DirectoryPage.Result.STALE && staleRetries++ < 2) {
             reset(now + SPACING); status = "stale_retry";
         } else {
@@ -134,5 +152,5 @@ public final class DirectoryClientState {
         if (closed || waiting() || page == null || page != rendered || !page.rows.contains(row)) return false;
         selected = row; return true;
     }
-    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; specialTabName = ""; }
+    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; specialTabName = ""; favoriteMachine = null; }
 }

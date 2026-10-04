@@ -31,6 +31,7 @@ public final class GuiRemoteTrading extends GuiContainer {
     private GuiButton buy;
     private INetHandler connection;
     private boolean consumedMouse;
+    private boolean totalsVisible;
     private final DirectoryTab returnTab;
     private DirectoryClientState.Bookmark returnBookmark;
     private INetHandler bookmarkConnection;
@@ -63,7 +64,10 @@ public final class GuiRemoteTrading extends GuiContainer {
         buttonList.add(new GuiButton(2, guiLeft, guiTop - 24, 176, 20, tr("remote.back")));
         updateAccess();
     }
-    private void updateAccess() { if (buy != null) buy.enabled = machine.view.offerRevision > 0 && machine.tradeRequests.canSubmit(System.nanoTime()); }
+    private void updateAccess() {
+        if (buy != null) buy.enabled = machine.view.offerRevision > 0 && batch != null
+                && PurchaseTotals.parseBatch(batch.getText()) > 0 && machine.tradeRequests.canSubmit(System.nanoTime());
+    }
     @Override public void updateScreen() {
         super.updateScreen();
         if (mc.player == null || mc.world == null || mc.getConnection() != connection || mc.player.openContainer != machine
@@ -76,9 +80,8 @@ public final class GuiRemoteTrading extends GuiContainer {
         if (button.id == 2) { backToDirectory(); return; }
         updateAccess();
         if (button.id != 1 || !buy.enabled) return;
-        int count;
-        try { count = Integer.parseInt(batch.getText()); } catch (NumberFormatException ex) { return; }
-        if (count < 1 || count > TradeLimits.MAX_BATCH_SIZE) return;
+        int count = PurchaseTotals.parseBatch(batch.getText());
+        if (count == 0) return;
         long requestId = machine.tradeRequests.begin(System.nanoTime());
         if (requestId == 0) return;
         machine.completedTrades = 0; machine.feedbackKey = PREFIX + "trade_pending";
@@ -86,6 +89,10 @@ public final class GuiRemoteTrading extends GuiContainer {
     }
     @Override protected void keyTyped(char character, int key) throws IOException {
         if (key == Keyboard.KEY_ESCAPE) { backToDirectory(); return; }
+        if (key == Keyboard.KEY_F1) {
+            if (!Keyboard.isRepeatEvent()) totalsVisible = !totalsVisible;
+            return;
+        }
         if (key == Keyboard.KEY_TAB) { batch.setFocused(!batch.isFocused()); return; }
         if (batch.isFocused() && key != Keyboard.KEY_ESCAPE) {
             if (key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER) { if (!Keyboard.isRepeatEvent()) actionPerformed(buy); }
@@ -107,6 +114,11 @@ public final class GuiRemoteTrading extends GuiContainer {
             return;
         }
         batch.mouseClicked(x, y, button);
+        if (totalsAt(x, y)) {
+            consumedMouse = true;
+            if (button == 0) totalsVisible = !totalsVisible;
+            return;
+        }
         if (batch.isFocused() || definitionAt(x, y) >= 0) { consumedMouse = true; return; }
         super.mouseClicked(x, y, button);
     }
@@ -136,6 +148,10 @@ public final class GuiRemoteTrading extends GuiContainer {
             itemRender.renderItemOverlayIntoGUI(fontRenderer, item, definitionX(slot), 35, Integer.toString(machine.view.quantities[slot]));
         }
         RenderHelper.disableStandardItemLighting();
+        PurchaseTotals totals = PurchaseTotalsDisplay.snapshot(machine.view, batch.getText());
+        fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, false), 8, PurchaseTotalsDisplay.ROW_Y, 4210752);
+        fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, true), 98, PurchaseTotalsDisplay.ROW_Y, 4210752);
+        fontRenderer.drawString("F1", 82, PurchaseTotalsDisplay.ROW_Y, 0x555555);
     }
     @Override public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         drawDefaultBackground(); super.drawScreen(mouseX, mouseY, partialTicks);
@@ -143,12 +159,22 @@ public final class GuiRemoteTrading extends GuiContainer {
         int slot = definitionAt(mouseX, mouseY);
         if (slot >= 0 && !machine.view.templates[slot].isEmpty()) {
             List<String> lines = new ArrayList<>(getItemToolTip(machine.view.templates[slot]));
-            lines.add(tr("required_count", machine.view.quantities[slot])); drawHoveringText(lines, mouseX, mouseY);
-        } else renderHoveredToolTip(mouseX, mouseY);
+            PurchaseTotalsDisplay.appendItem(lines, machine.view, slot, PurchaseTotalsDisplay.snapshot(machine.view, batch.getText()));
+            if (!totalsVisible) drawHoveringText(lines, mouseX, mouseY);
+        } else if (!totalsVisible) renderHoveredToolTip(mouseX, mouseY);
         String feedback = machine.view.offerRevision == 0 ? tr("remote.loading")
                 : machine.feedbackKey.isEmpty() ? tr("remote.lifetime") : I18n.format(machine.feedbackKey, machine.completedTrades);
         fontRenderer.drawSplitString(feedback, guiLeft, guiTop + ySize + 4, xSize, 0xFFFFFF);
+        if (totalsVisible || totalsAt(mouseX, mouseY)) {
+            drawHoveringText(PurchaseTotalsDisplay.details(machine.view,
+                            PurchaseTotalsDisplay.snapshot(machine.view, batch.getText()), fontRenderer, width),
+                    PurchaseTotalsDisplay.tooltipX(width), totalsVisible ? guiTop + PurchaseTotalsDisplay.ROW_Y : mouseY);
+        }
         GlStateManager.enableDepth();
+    }
+    private boolean totalsAt(int x, int y) {
+        return x >= guiLeft + 8 && x < guiLeft + 168
+                && y >= guiTop + PurchaseTotalsDisplay.ROW_Y && y < guiTop + PurchaseTotalsDisplay.ROW_Y + 9;
     }
     @Override public void onGuiClosed() { super.onGuiClosed(); Keyboard.enableRepeatEvents(false); }
 }

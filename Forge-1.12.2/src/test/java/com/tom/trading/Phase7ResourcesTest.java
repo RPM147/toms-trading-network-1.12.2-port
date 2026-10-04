@@ -53,7 +53,8 @@ public class Phase7ResourcesTest {
         try (InputStreamReader reader = new InputStreamReader(resource("lang/tr_tr.lang"), StandardCharsets.UTF_8)) { turkish.load(reader); }
         for (String key : english.stringPropertyNames()) {
             if (!key.startsWith("gui.toms_trading_network.directory.") && !key.startsWith("key.")
-                    && !key.startsWith("gui.toms_trading_network.remote.")) continue;
+                    && !key.startsWith("gui.toms_trading_network.remote.")
+                    && !key.startsWith("gui.toms_trading_network.totals.")) continue;
             assertNotNull(key, turkish.getProperty(key));
             assertEquals(key, english.getProperty(key).split("%s", -1).length, turkish.getProperty(key).split("%s", -1).length);
         }

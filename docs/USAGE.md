@@ -51,6 +51,7 @@ across game restarts or shared across servers.
 | Up / Down | Select a row when list is focused |
 | Home / End | First / last row on the current page |
 | PageUp / PageDown | Previous / next page when list is focused |
+| F | Add/remove the selected machine from personal favorites, with the list focused |
 | Enter | Leave search for list; open selected trade; activate focused button |
 | Escape | Close directory; return from trade; close details panel |
 | F1 | Open/close full error details, selected offer and help |
@@ -59,6 +60,60 @@ Long status messages wrap; F1 gives paginated full text. In the trade screen,
 Tab toggles focus on the quantity field and Enter in that field purchases. Holding
 Enter does not repeatedly issue purchases. Do not infer a failed purchase from a
 missing network reply: check inventory/server state rather than blindly retrying.
+
+## Purchase totals
+
+Both physical and remote trade screens show the selected batch's total item counts
+under the payment/output icons. The icons themselves keep their per-trade amounts.
+Hover the totals row or press **F1** for an item-by-item payment/delivery breakdown;
+item tooltips also include their selected-batch total. Ore Dictionary payments show
+the accepted group, not a promise of which matching inventory variant will be used.
+
+Totals are a preview for the requested count (1–1024), not a reservation. Available
+stock, payment and inventory space can cause fewer complete trades to succeed.
+An empty/invalid count or unavailable offer has no valid total. Adding counts of
+different items is not currency conversion: use the breakdown for actual costs.
+
+## Personal favorites
+
+Click **[+]** next to a machine to add it, or **[*]** to remove it. The marker changes
+only favorites and never purchases. Clicking the rest of the row still opens the
+trade. Keyboard users can select a row with arrows and press **F** while the list
+is focused. Typing F inside the search field continues to type normally.
+
+The **Favorites** tab contains your own selected machines and supports the same
+search/paging as other tabs. Favorites are stored by stable machine UUID in your
+server-side player data, scoped to this world, and survive normal saves/restarts
+and respawns. Up to 256 favorites are kept per player. They do not affect another
+player's list, the shared category, ownership, stock or protection. A replacement
+machine with a new UUID does not inherit a favorite. No chunk loading is needed
+to change favorites. When adding a favorite, saved IDs absent from the directory
+are cleaned up so removed machines do not permanently consume the limit. If a
+directory change prevents confirming the result, refresh to check the saved state.
+
+## Server transaction log
+
+Enabled by default since port.16. On the server/hosting instance, the existing
+`general` config category accepts `B:transactionLog=true` (or `false` to disable);
+restart after changing it. This is independent of `publicTradeAnnouncements`.
+
+Each completed local or remote player trade appends one UTF-8 JSON object to
+`<world>/toms_trading_network/transactions.jsonl`. It records UTC time, buyer,
+machine and owner identifiers, buyer/owner names, actual completed trade count,
+and actual payment/delivery item identifiers, labels and quantities. It does not
+record raw item NBT, failed trades, hopper transfers or replayed requests again.
+
+The active file is limited to 10 MiB, with five archives named
+`transactions.1.jsonl` through `transactions.5.jsonl` (1 is newest). Oldest archives
+are automatically replaced. Copy logs elsewhere before rotation if longer history
+is needed. Player names/UUIDs are personal data; do not publish these files unredacted.
+
+Records are flushed after each append, without a per-trade disk fsync or atomic
+commit with Minecraft's world save. This is an operational audit, not a crash-proof
+financial ledger or automatic rollback facility. Sudden crashes may leave a partial
+tail record or world/log disagreement. Disk/serialization failures disable logging
+for the current server session and report an error in the regular server log;
+trades and chat remain enabled. Fix disk/path problems and restart to resume logging.
 
 ## Shared tab (Currency & Tax by default)
 
@@ -116,7 +171,7 @@ with the world, not immediately committed to an external database.
 
 Successful trades can announce their actual paid/delivered items to all players.
 The server's `publicTradeAnnouncements` setting controls this behavior and requires
-restart. Receipts are chat messages, not a durable transaction audit database.
+restart. Chat receipts and the separate transaction log can be enabled independently.
 
 Use the server-side `RemoteSettings` configuration for remote-trading controls.
 Changing settings is an administrator operation; client settings cannot grant

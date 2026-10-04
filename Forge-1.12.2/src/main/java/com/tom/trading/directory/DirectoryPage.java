@@ -4,7 +4,7 @@ import java.util.*;
 
 /** Immutable public display DTO. No item NBT, live inventory, paths or permissions. */
 public final class DirectoryPage {
-    public enum Result { OK, STALE, UNAVAILABLE, BUSY }
+    public enum Result { OK, STALE, UNAVAILABLE, BUSY, FAVORITES_FULL }
     public enum State { RECORDED, UNVERIFIED, LEGACY, IDENTITY_CONFLICT, UNSUPPORTED, REMOVED_DIMENSION }
     public final DirectoryQuery query;
     public final Result result;
@@ -48,11 +48,18 @@ public final class DirectoryPage {
     public static final class Row {
         public final MachineDirectoryEntry entry;
         public final State state;
+        /** Presentation only: belongs to the authenticated recipient, never a permission. */
+        public final boolean favorite;
         public Row(MachineDirectoryEntry entry, State state) {
+            this(entry, state, false);
+        }
+        public Row(MachineDirectoryEntry entry, State state, boolean favorite) {
             this.entry = Objects.requireNonNull(entry); this.state = Objects.requireNonNull(state);
             if ((state == State.LEGACY && entry.machineId != null)
+                    || (favorite && entry.machineId == null)
                     || ((state == State.RECORDED || state == State.IDENTITY_CONFLICT) && entry.machineId == null))
                 throw new IllegalArgumentException("Invalid row identity");
+            this.favorite = favorite;
         }
         public boolean sameTarget(Row other) {
             return other != null && entry.address.equals(other.entry.address) && Objects.equals(entry.machineId, other.entry.machineId);

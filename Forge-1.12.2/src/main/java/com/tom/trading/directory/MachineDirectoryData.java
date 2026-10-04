@@ -63,6 +63,15 @@ public final class MachineDirectoryData extends WorldSavedData {
         return locations != null && locations.size() > 1;
     }
 
+    /** Metadata-only identity validation; never loads or grants access to a machine. */
+    public boolean isUniqueIdentity(UUID id) {
+        Set<MachineAddress> locations = identities.get(id);
+        return id != null && locations != null && locations.size() == 1
+                && isUniqueIdentity(locations.iterator().next(), id);
+    }
+    /** Includes hints/conflicts, so favorite cleanup removes only identities absent from this directory. */
+    public boolean containsIdentity(UUID id) { return id != null && identities.containsKey(id); }
+
     public boolean isUniqueIdentity(MachineAddress address, UUID id) {
         Set<MachineAddress> locations = identities.get(id);
         MachineDirectoryEntry entry = entries.get(address);

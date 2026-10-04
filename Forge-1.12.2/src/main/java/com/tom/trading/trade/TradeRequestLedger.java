@@ -42,7 +42,7 @@ public final class TradeRequestLedger {
             try { afterRecord.accept(outcome.receipt); }
             catch (RuntimeException | LinkageError failure) {
                 LogManager.getLogger(BuildInfo.MOD_ID).error(
-                        "Trade committed and recorded, but its announcement failed; it will not be retried", failure);
+                        "Trade committed and recorded, but its receipt publication failed; it will not be retried", failure);
             }
         }
         return entry.result;

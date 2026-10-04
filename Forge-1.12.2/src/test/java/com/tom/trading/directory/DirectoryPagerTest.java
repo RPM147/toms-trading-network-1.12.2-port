@@ -105,4 +105,40 @@ public class DirectoryPagerTest {
         assertEquals(DirectoryPage.Result.UNAVAILABLE, execute(unreadable, initial).result);
         assertEquals(0, unreadable.pager().pendingCount());
     }
+    @Test public void favoritesAreFilteredAcrossTheWholeDirectoryBeforeSearchAndPaging() {
+        MachineDirectoryData data = data(180); Set<UUID> favorites = new HashSet<>();
+        for (MachineDirectoryEntry entry : data.snapshot())
+            if (entry.address.x >= 120) favorites.add(entry.machineId);
+        List<DirectoryPage> answers = new ArrayList<>();
+        DirectoryQuery second = new DirectoryQuery(UUID.randomUUID(), 1, 0, 1, data.getWorldId(), data.getRevision(), "Shop", DirectoryTab.FAVORITES);
+        data.pager().submit(UUID.randomUUID(), second, favorites, NOW, () -> true, answers::add);
+        favorites.clear(); // In-flight jobs own immutable per-recipient snapshots.
+        data.pager().tick(NOW, d -> true);
+        DirectoryPage page = answers.get(0);
+        assertEquals(60, page.total); assertEquals(10, page.rows.size());
+        assertEquals(170, page.rows.get(0).entry.address.x);
+        for (DirectoryPage.Row row : page.rows) assertTrue(row.favorite);
+        answers.clear();
+        DirectoryQuery absent = new DirectoryQuery(UUID.randomUUID(), 2, 0, 0, data.getWorldId(), data.getRevision(), "Shop", DirectoryTab.FAVORITES);
+        data.pager().submit(UUID.randomUUID(), absent, NOW, () -> true, answers::add);
+        data.pager().tick(NOW, d -> true);
+        assertEquals(0, answers.get(0).total); assertTrue(answers.get(0).rows.isEmpty());
+    }
+    @Test public void privateFavoriteFlagsAlsoAppearInAllAndSharedRowsWithoutChangingMembership() {
+        MachineDirectoryData data = data(3); List<MachineDirectoryEntry> entries = new ArrayList<>(data.snapshot());
+        MachineDirectoryEntry starred = entries.get(1), shared = entries.get(2);
+        data.addSpecial(shared.address, shared.machineId);
+        Set<UUID> favorites = new HashSet<>(Arrays.asList(starred.machineId, shared.machineId));
+        List<DirectoryPage> answers = new ArrayList<>();
+        data.pager().submit(UUID.randomUUID(), query(data, 0, ""), favorites, NOW, () -> true, answers::add);
+        data.pager().tick(NOW, d -> true);
+        assertEquals(3, answers.get(0).total); assertFalse(answers.get(0).rows.get(0).favorite);
+        assertTrue(answers.get(0).rows.get(1).favorite); assertTrue(answers.get(0).rows.get(2).favorite);
+        answers.clear();
+        DirectoryQuery special = new DirectoryQuery(UUID.randomUUID(), 1, 0, 0, data.getWorldId(), data.getRevision(), "", DirectoryTab.ECONOMY);
+        data.pager().submit(UUID.randomUUID(), special, favorites, NOW, () -> true, answers::add);
+        data.pager().tick(NOW, d -> true);
+        assertEquals(1, answers.get(0).total); assertTrue(answers.get(0).rows.get(0).favorite);
+        assertEquals(shared.machineId, answers.get(0).rows.get(0).entry.machineId);
+    }
 }

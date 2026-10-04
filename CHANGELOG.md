@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.4-port.16
+
+- Added server transaction logs for committed local/remote purchases, with actual
+  item quantities, UTC timestamp and player/machine/owner identities. JSONL files
+  rotate at 10 MiB with five archives. New `general.transactionLog` setting defaults
+  to true and works independently of public chat announcements.
+- Added selected-batch purchase totals to both trade screens, item-by-item hover/F1
+  details and per-item total tooltips. Invalid/empty counts no longer enable buying.
+- Added personal Favorites tab and [+]/[*] row controls; press F on a keyboard-selected
+  row. Favorites persist in world-scoped player data, are limited to 256 UUIDs, and
+  are filtered server-side before pagination/search without loading chunks.
+- Kept private machine inventories, shared-tab membership and trade permissions
+  unchanged. Favorites grant no access. Request correlation/rate limits are retained.
+- Extended directory packets; install port.16 on the server/host and every client.
+  Existing directory/tile/preview formats remain unchanged. Regular release, not pre-release.
+- Completed missing Spanish directory-preview translations found by the resource checks.
+
 ## 0.3.4-port.15
 
 - Simplified directory rows (G key) in both All machines and the shared tab:

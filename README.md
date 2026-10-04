@@ -11,8 +11,8 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current package version: **0.3.4-port.15**, with simplified directory rows.
-Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.15),
+Current package version: **0.3.4-port.16**, with transaction logs, purchase totals and personal favorites.
+Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.16),
 not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
 user-reported experience, not a runtime test of the new package. Automated and
@@ -29,6 +29,9 @@ manual verification have different scopes; see [validation](docs/VALIDATION.md).
   quantities on the right. Full offer/status text remains in hover details and F1.
 - Remote trade-only access with bounded temporary chunk loading and live target checks.
 - Optional public chat receipts for successful trades.
+- Rotating server transaction logs with actual paid/delivered quantities, independent of chat.
+- Selected-batch purchase totals in local and remote trading, with an item-by-item breakdown.
+- Personal, world-specific favorites: use [+]/[*] in the directory or press F on a selected row.
 - A server-managed shared tab for selected machine UUIDs, with a configurable name
   (defaults to **Currency & Tax**).
 - Search/tab/page/scroll restoration after returning from a trade, keyboard navigation
@@ -46,6 +49,7 @@ come from other mods; this port does not add a currency item system.
 The AI-generated project icon above is branding artwork, not an in-game render.
 Screenshots show an earlier version; port.15 removes the repeated Receive/Pay
 and status lines from directory rows while retaining the right-hand trade previews.
+Port.16 adds favorite markers/a third tab and totals to trading; these are not shown in the older screenshots.
 
 ### Vending machines in the world
 
@@ -119,9 +123,24 @@ and formatting characters are removed. Long names are shortened on the button;
 hover over it or press F1 to read the full name. Renaming does not change machine
 membership, ownership, creative mode, prices or permissions.
 
-**Use the same exact release on the server/host and all clients.** Port.14 added
-the directory label field; port.15 keeps that format but still requires matching
-mod versions on every peer.
+**Use the same exact release on the server/host and all clients.** Port.16 adds
+favorite mutations and per-row favorite flags to directory packets; older versions cannot connect.
+
+## Totals, favorites and transaction logs
+
+The trade screen shows selected-batch item totals below the offer icons. Hover
+there or press **F1** for each item's total payment/output. This is a requested
+quantity preview, not a guarantee of stock or a conversion between currencies.
+
+In the directory, click **[+]** to favorite a machine and **[*]** to remove it;
+with the list focused, **F** changes the selected row. Open **Favorites** to browse
+your own saved selection. It is separate from the administrator-managed shared tab.
+
+The server records completed trades in
+`<world>/toms_trading_network/transactions.jsonl` by default, with bounded rotation.
+Set `B:transactionLog=false` under `general` in the server config and restart to
+disable it. Logs contain player names/UUIDs and trade details; treat them as private
+administrator data. See [usage](docs/USAGE.md) for retention and crash limitations.
 
 ## Administrator commands
 

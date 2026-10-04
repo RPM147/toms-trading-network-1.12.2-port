@@ -35,7 +35,7 @@ public final class GuiMachineDirectory extends GuiScreen {
     private Entries entries;
     private DirectoryPage renderedPage;
     private int panelLeft, panelWidth, listTop, listBottom;
-    private GuiButton previous, next, refresh, allTab, economyTab;
+    private GuiButton previous, next, refresh, allTab, economyTab, favoritesTab;
     private final DirectoryTab initialTab;
     private final DirectoryClientState.Bookmark returnBookmark;
     private final INetHandler bookmarkConnection;
@@ -99,10 +99,11 @@ public final class GuiMachineDirectory extends GuiScreen {
         entries = new Entries();
         renderedPage = null; entries.scrollBy(oldScroll);
         buttonList.clear();
-        int tabWidth = (panelWidth - 4) / 2;
+        int tabWidth = (panelWidth - 8) / 3;
         allTab = new GuiButton(5, panelLeft, 28, tabWidth, 20, tr("tab.all"));
-        economyTab = new GuiButton(6, panelLeft + tabWidth + 4, 28, panelWidth - tabWidth - 4, 20, tr("tab.economy"));
-        buttonList.add(allTab); buttonList.add(economyTab);
+        economyTab = new GuiButton(6, panelLeft + tabWidth + 4, 28, tabWidth, 20, tr("tab.economy"));
+        favoritesTab = new GuiButton(11, panelLeft + 2 * (tabWidth + 4), 28, panelWidth - 2 * (tabWidth + 4), 20, tr("tab.favorites"));
+        buttonList.add(allTab); buttonList.add(economyTab); buttonList.add(favoritesTab);
         previous = new GuiButton(1, panelLeft, height - 26, 54, 20, tr("previous"));
         next = new GuiButton(2, panelLeft + 58, height - 26, 54, 20, tr("next"));
         refresh = new GuiButton(3, panelLeft + panelWidth - 138, height - 26, 72, 20, tr("refresh"));
@@ -157,11 +158,14 @@ public final class GuiMachineDirectory extends GuiScreen {
         previous.enabled = page != null && !state.waiting() && !opening.waiting() && page.query.page > 0;
         next.enabled = page != null && !state.waiting() && !opening.waiting() && page.query.page + 1 < page.pageCount();
         refresh.enabled = !state.waiting() && !opening.waiting();
-        allTab.enabled = !opening.waiting() && state.tab() != DirectoryTab.ALL;
-        economyTab.enabled = !opening.waiting() && state.tab() != DirectoryTab.ECONOMY;
-        allTab.displayString = (state.tab() == DirectoryTab.ALL ? "> " : "") + tr("tab.all");
+        allTab.enabled = !opening.waiting() && !state.favoriteChanging() && state.tab() != DirectoryTab.ALL;
+        economyTab.enabled = !opening.waiting() && !state.favoriteChanging() && state.tab() != DirectoryTab.ECONOMY;
+        favoritesTab.enabled = !opening.waiting() && !state.favoriteChanging() && state.tab() != DirectoryTab.FAVORITES;
+        search.setEnabled(!state.favoriteChanging());
+        allTab.displayString = fit((state.tab() == DirectoryTab.ALL ? "> " : "") + tr("tab.all"), allTab.width - 12);
         economyTab.displayString = fit((state.tab() == DirectoryTab.ECONOMY ? "> " : "") + specialTabName(), economyTab.width - 12);
-        for (GuiButton button : buttonList) button.visible = details ? button.id >= 8 : button.id < 8;
+        favoritesTab.displayString = fit((state.tab() == DirectoryTab.FAVORITES ? "> " : "") + tr("tab.favorites"), favoritesTab.width - 12);
+        for (GuiButton button : buttonList) button.visible = details ? button.id >= 8 && button.id <= 10 : button.id < 8 || button.id == 11;
         for (GuiButton button : buttonList) {
             if (button.id == 9) button.enabled = detailPage > 0;
             if (button.id == 10) button.enabled = details && detailPage + 1 < detailPages();
@@ -177,8 +181,8 @@ public final class GuiMachineDirectory extends GuiScreen {
         if (button.id == 1) state.turnPage(-1, System.nanoTime());
         if (button.id == 2) state.turnPage(1, System.nanoTime());
         if (button.id == 3) state.refresh(System.nanoTime());
-        if (button.id == 5 || button.id == 6) {
-            state.setTab(button.id == 5 ? DirectoryTab.ALL : DirectoryTab.ECONOMY, System.nanoTime());
+        if (button.id == 5 || button.id == 6 || button.id == 11) {
+            state.setTab(button.id == 5 ? DirectoryTab.ALL : button.id == 6 ? DirectoryTab.ECONOMY : DirectoryTab.FAVORITES, System.nanoTime());
             openStatus = "open_hint"; previewIcons.clear(); entries.scrollBy(-100000);
         }
         openStatus = "open_hint"; renderedPage = null; updateButtons();
@@ -203,6 +207,12 @@ public final class GuiMachineDirectory extends GuiScreen {
         RemoteOpenRequest request = opening.begin(renderedPage, row, System.nanoTime());
         if (request != null) { openStatus = "open_hint"; RemoteNetwork.request(request); updateButtons(); }
     }
+    private void changeFavorite(DirectoryPage.Row row) {
+        if (opening.waiting() || renderedPage == null || row == null) return;
+        if (state.changeFavorite(renderedPage, row, System.nanoTime())) {
+            renderedPage = null; cachedDetails = null; openStatus = "open_hint"; updateButtons();
+        }
+    }
     @Override protected void keyTyped(char typedChar, int keyCode) throws IOException {
         if (state == null) return;
         if (keyCode == Keyboard.KEY_F1 && !Keyboard.isRepeatEvent()) {
@@ -222,6 +232,7 @@ public final class GuiMachineDirectory extends GuiScreen {
         if (search == null) return;
         if (isCtrlKeyDown() && keyCode == Keyboard.KEY_F) { setFocus(-1); return; }
         if (focus == -2) {
+            if (keyCode == Keyboard.KEY_F && !Keyboard.isRepeatEvent()) { changeFavorite(state.selected()); return; }
             boolean moved = false;
             if (keyCode == Keyboard.KEY_UP) moved = state.moveSelection(-1);
             if (keyCode == Keyboard.KEY_DOWN) moved = state.moveSelection(1);
@@ -280,7 +291,8 @@ public final class GuiMachineDirectory extends GuiScreen {
             text(tr("page", renderedPage.query.page + 1, renderedPage.pageCount(), renderedPage.total), panelLeft, 78, panelWidth - 94, 0xDDDDDD);
         } else text(tr(state.status()), panelLeft, 78, panelWidth - 94, 0xD5B879);
         if (renderedPage != null && renderedPage.rows.isEmpty()) {
-            String key = state.tab() == DirectoryTab.ECONOMY && state.search().isEmpty() ? "tab.economy_empty" : "empty";
+            String key = !state.search().isEmpty() ? "empty" : state.tab() == DirectoryTab.ECONOMY ? "tab.economy_empty"
+                    : state.tab() == DirectoryTab.FAVORITES ? "tab.favorites_empty" : "empty";
             fontRenderer.drawSplitString(tr(key), panelLeft + 8, listTop + 10, panelWidth - 24, 0xAAAAAA);
         }
         DirectoryPage.Row selected = state.selected();
@@ -324,6 +336,7 @@ public final class GuiMachineDirectory extends GuiScreen {
                         tr("location", e.address.dimension, e.address.x, e.address.y, e.address.z), status(row),
                         tr(e.preview.known ? "preview_cached" : "preview_unknown_hint"), tr("access_unchecked")));
                 appendOfferLines(tooltip, e.preview);
+                if (e.machineId != null) tooltip.add(tr(row.favorite ? "favorite_remove" : "favorite_add"));
                 drawHoveringText(tooltip, mouseX, mouseY);
             }
         }
@@ -343,6 +356,7 @@ public final class GuiMachineDirectory extends GuiScreen {
                 && cachedDetailsPage == state.page() && cachedDetailsSelection == state.selected()) return cachedDetails;
         List<String> text = new ArrayList<>();
         text.add(feedback); text.add(tr("keyboard_help")); text.add(tr("search_help"));
+        text.add(tr("favorites_help"));
         text.add(tr("tab.shared_name", specialTabName()));
         if (state.page() != null) text.add(tr(state.page().backfillComplete ? "coverage_snapshot" : "coverage_incomplete"));
         DirectoryPage.Row selected = state.selected();
@@ -448,6 +462,10 @@ public final class GuiMachineDirectory extends GuiScreen {
             if (!details && !opening.waiting() && renderedPage != null && index >= 0 && index < renderedPage.rows.size()) {
                 DirectoryPage.Row row = renderedPage.rows.get(index);
                 if (!state.select(renderedPage, row)) return;
+                int rowLeft = GuiMachineDirectory.this.width / 2 - getListWidth() / 2 + 2;
+                if (mouseX >= rowLeft && mouseX < rowLeft + 24 && row.entry.machineId != null) {
+                    setFocus(-2); changeFavorite(row); return;
+                }
                 setFocus(-2); openSelected();
             }
         }
@@ -460,8 +478,9 @@ public final class GuiMachineDirectory extends GuiScreen {
             int space = getListWidth() - 10;
             int detailsWidth = Math.max(0, space - previewLayout.previewWidth - 6);
             // Keep rows quiet; full offer/status text remains in hover details and F1.
-            text(machineName(e), x + 3, y + 18, detailsWidth, 0xFFFFFF);
-            text(tr("owner", ownerName(e)), x + 3, y + 32, detailsWidth, 0xB0D9EE);
+            if (e.machineId != null) text(row.favorite ? "[*]" : "[+]", x + 3, y + 18, 20, row.favorite ? 0xFFD66B : 0x999999);
+            text(machineName(e), x + 25, y + 18, detailsWidth - 22, 0xFFFFFF);
+            text(tr("owner", ownerName(e)), x + 25, y + 32, detailsWidth - 22, 0xB0D9EE);
             drawPreview(e.preview, x + 3 + space - previewLayout.previewWidth, y, mouseX, mouseY);
         }
     }

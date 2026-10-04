@@ -60,6 +60,30 @@ server stop release handles; failed releases continue to reserve quota until tea
 Forge load callbacks and exact-pack interactions still require runtime validation.
 Never weaken authorization or quotas to make an unavailable target appear usable.
 
+## Port.16 additions
+
+- Logging consumes the immutable committed receipt through the request ledger's
+  post-record publication path, never a client-provided receipt. Replay/failure
+  paths do not append another success. Chat and log sinks are isolated from each
+  other and cannot roll back or retry a committed trade. Per-world JSONL files are
+  rotated at 10 MiB with five archives; server lifecycle owns the writer. Writes
+  flush synchronously, so slow storage can affect ticks. There is no unbounded
+  async queue, fsync guarantee or crash-atomic coupling to inventory saves.
+- Purchase totals are client presentation only: validated batch counts multiplied
+  by public definition quantities using long arithmetic. They neither reserve
+  stock nor alter trade execution, payment selection or permission checks.
+- Favorites belong to the authenticated player's persisted Forge player NBT,
+  scoped by directory WorldUUID, with at most 256 machine UUIDs. The packet never
+  selects another player. Mutations are idempotent set operations, require a current
+  world/revision cursor, and share existing bounded directory ingress scheduling.
+  Favorite membership grants no authority and does not change global directory revision.
+- Favorite filtering occurs in the bounded server query scan before search/paging,
+  using a snapshot of that player's membership. Existing rows carry a personal
+  favorite flag; the appended FAVORITES enum preserves existing tab ordinals.
+  Request/response layouts changed, so exact-version peer matching is mandatory.
+- Directory/tile/preview schemas remain 2/3/1. Favorites introduce a separate,
+  namespaced player-data record; backups should include the whole world/player data.
+
 ## Build invariants
 
 Java 8 bytecode, pinned Forge/Gradle/mappings, no bundled optional dependencies,

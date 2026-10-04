@@ -73,17 +73,20 @@ public final class TradingNetworkMod {
     @Mod.EventHandler
     public void serverStarting(FMLServerStartingEvent event) {
         com.tom.trading.remote.RemoteTrading.start(event.getServer());
+        com.tom.trading.trade.TradeTransactionLog.start(event.getServer());
         event.registerServerCommand(new DirectoryCommand());
     }
 
     @Mod.EventHandler
     public void serverStopping(net.minecraftforge.fml.common.event.FMLServerStoppingEvent event) {
         com.tom.trading.remote.RemoteTrading.stopServer();
+        com.tom.trading.trade.TradeTransactionLog.stop();
     }
 
     @Mod.EventHandler
     public void serverStopped(net.minecraftforge.fml.common.event.FMLServerStoppedEvent event) {
         com.tom.trading.remote.RemoteTrading.stopServer();
+        com.tom.trading.trade.TradeTransactionLog.stop();
     }
 
     @Mod.EventHandler

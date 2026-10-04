@@ -174,4 +174,36 @@ public class DirectoryNetworkTest {
             } finally { bytes.release(); }
         }
     }
+    @Test public void idempotentFavoriteChangesAndPrivateFlagsRoundTripWithoutPlayerIdentity() {
+        UUID worldId = UUID.randomUUID(), machineId = UUID.randomUUID();
+        for (boolean value : Arrays.asList(false, true)) {
+            DirectoryQuery query = new DirectoryQuery(UUID.randomUUID(), 5, 0, 0, worldId, 9, "shop",
+                    DirectoryTab.FAVORITES, machineId, value);
+            ByteBuf bytes = Unpooled.buffer();
+            try {
+                new DirectoryNetwork.RequestPage(query).toBytes(bytes);
+                DirectoryNetwork.RequestPage request = new DirectoryNetwork.RequestPage(); request.fromBytes(bytes.duplicate());
+                assertTrue(request.valid); assertEquals(machineId, request.query.favoriteMachine); assertEquals(value, request.query.favoriteValue);
+                bytes.setByte(bytes.writerIndex() - 2, 2); // Favorite value is a strict boolean, followed by the tab enum.
+                DirectoryNetwork.RequestPage malformed = new DirectoryNetwork.RequestPage(); malformed.fromBytes(bytes.duplicate()); assertFalse(malformed.valid);
+                bytes.clear();
+                DirectoryPage.Row row = new DirectoryPage.Row(new MachineDirectoryEntry(new MachineAddress(0, 1, 64, 1),
+                        machineId, null, "Owner", "Shop", MachineDirectoryEntry.Evidence.OBSERVED), DirectoryPage.State.RECORDED, value);
+                DirectoryPage page = new DirectoryPage(query, DirectoryPage.Result.OK, worldId, 9, 1, false, Collections.singletonList(row));
+                new DirectoryNetwork.Page(page).toBytes(bytes);
+                DirectoryNetwork.Page response = new DirectoryNetwork.Page(); response.fromBytes(bytes.duplicate());
+                assertTrue(response.valid); assertEquals(value, response.page.rows.get(0).favorite);
+                assertEquals(machineId, response.page.query.favoriteMachine); assertEquals(value, response.page.query.favoriteValue);
+            } finally { bytes.release(); }
+        }
+    }
+    @Test public void favoriteMutationsRequireBoundSaveAndFirstPage() {
+        UUID screen = UUID.randomUUID(), machine = UUID.randomUUID(), world = UUID.randomUUID();
+        try { new DirectoryQuery(screen, 1, 0, 0, null, 0, "", DirectoryTab.ALL, machine, true); fail(); }
+        catch (IllegalArgumentException expected) { }
+        try { new DirectoryQuery(screen, 1, 0, 1, world, 1, "", DirectoryTab.ALL, machine, false); fail(); }
+        catch (IllegalArgumentException expected) { }
+        try { new DirectoryQuery(screen, 1, 0, 0, world, 1, "", DirectoryTab.ALL, null, true); fail(); }
+        catch (IllegalArgumentException expected) { }
+    }
 }

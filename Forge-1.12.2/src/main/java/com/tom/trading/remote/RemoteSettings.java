@@ -18,6 +18,11 @@ public final class RemoteSettings {
     @Config.RequiresMcRestart
     @Config.Comment("Announce completed local and remote player trades to all players. Respects their chat visibility setting.")
     public static boolean publicTradeAnnouncements = true;
+    @Config.RequiresMcRestart
+    @Config.Comment({"Record successful local and remote purchases in the world's toms_trading_network/transactions.jsonl.",
+            "Independent of publicTradeAnnouncements. Retains the active 10 MiB file and five rotated archives.",
+            "Logging is best-effort; a disk failure disables it until server restart without blocking purchases."})
+    public static boolean transactionLog = true;
     @Config.RangeInt(min = 1, max = 8) @Config.RequiresMcRestart
     public static int maxTargetChunks = 8;
     @Config.RangeInt(min = 1, max = 64) @Config.RequiresMcRestart

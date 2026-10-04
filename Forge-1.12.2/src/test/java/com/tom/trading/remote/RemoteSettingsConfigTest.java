@@ -79,6 +79,7 @@ public class RemoteSettingsConfigTest {
         assertFalse(config.hasKey("general", "MAX_CHUNKS_PER_TARGET"));
         assertTrue(config.hasKey("general", "maxLeasedChunks"));
         assertTrue(config.hasKey("general", "remoteTrading"));
+        assertTrue(config.get("general", "transactionLog", false).getBoolean());
         assertEquals("", config.get("general", "specialTabName", "").getString());
     }
 
@@ -102,6 +103,20 @@ public class RemoteSettingsConfigTest {
         config.get("general", "MAX_CHUNKS_PER_TARGET", 999999).set(999999);
         sync(config, true); sync(config, false);
         assertEquals(25, actualHardLimit());
+    }
+
+    @Test public void transactionLoggingCanBeDisabledIndependentlyOfChatAnnouncements() throws Exception {
+        Configuration config = new Configuration(new File(temp.getRoot(), "transaction-log.cfg"));
+        config.get("general", "transactionLog", true).set(false);
+        config.get("general", "publicTradeAnnouncements", false).set(true);
+        sync(config, true);
+        assertFalse(RemoteSettings.transactionLog);
+        assertTrue(RemoteSettings.publicTradeAnnouncements);
+        config.get("general", "transactionLog", false).set(true);
+        config.get("general", "publicTradeAnnouncements", true).set(false);
+        sync(config, true);
+        assertTrue(RemoteSettings.transactionLog);
+        assertFalse(RemoteSettings.publicTradeAnnouncements);
     }
 
     @Test public void customTabNameSurvivesRealForgeSaveLoadAndResync() throws Exception {

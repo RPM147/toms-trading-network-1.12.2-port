@@ -11,6 +11,9 @@ public final class DirectoryQuery {
     public final int playerDimension, page;
     public final String search;
     public final DirectoryTab tab;
+    /** Optional idempotent change to the authenticated player's own favorites. */
+    public final UUID favoriteMachine;
+    public final boolean favoriteValue;
 
     public DirectoryQuery(UUID screenId, long requestId, int playerDimension, int page,
                           UUID expectedWorld, long expectedRevision, String search) {
@@ -18,11 +21,19 @@ public final class DirectoryQuery {
     }
     public DirectoryQuery(UUID screenId, long requestId, int playerDimension, int page,
                           UUID expectedWorld, long expectedRevision, String search, DirectoryTab tab) {
+        this(screenId, requestId, playerDimension, page, expectedWorld, expectedRevision, search, tab, null, false);
+    }
+    public DirectoryQuery(UUID screenId, long requestId, int playerDimension, int page,
+                          UUID expectedWorld, long expectedRevision, String search, DirectoryTab tab,
+                          UUID favoriteMachine, boolean favoriteValue) {
         if (tab == null || screenId == null || requestId <= 0 || page < 0 || page > MAX_PAGE || !DirectoryText.valid(search)
+                || (favoriteMachine == null && favoriteValue)
+                || (favoriteMachine != null && (expectedWorld == null || page != 0))
                 || (expectedWorld == null ? expectedRevision != 0 || page != 0 : expectedRevision <= 0))
             throw new IllegalArgumentException("Invalid directory query");
         this.screenId = screenId; this.requestId = requestId; this.playerDimension = playerDimension;
         this.page = page; this.expectedWorld = expectedWorld; this.expectedRevision = expectedRevision; this.search = search;
         this.tab = tab;
+        this.favoriteMachine = favoriteMachine; this.favoriteValue = favoriteValue;
     }
 }

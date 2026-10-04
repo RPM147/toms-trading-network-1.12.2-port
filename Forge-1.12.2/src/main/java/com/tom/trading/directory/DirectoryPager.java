@@ -15,6 +15,10 @@ public final class DirectoryPager {
     DirectoryPager(MachineDirectoryData data) { this.data = data; }
     public int pendingCount() { return jobs.size(); }
     public void submit(UUID player, DirectoryQuery query, long now, BooleanSupplier active, Consumer<DirectoryPage> answer) {
+        submit(player, query, Collections.emptySet(), now, active, answer);
+    }
+    public void submit(UUID player, DirectoryQuery query, Set<UUID> favorites, long now,
+                       BooleanSupplier active, Consumer<DirectoryPage> answer) {
         jobs.remove(player); // New search supersedes the old search; never retain multiple jobs per player.
         if (!data.isSupported()) { answer.accept(error(query, DirectoryPage.Result.UNAVAILABLE)); return; }
         if (query.expectedWorld != null && (!query.expectedWorld.equals(data.getWorldId())
@@ -22,7 +26,9 @@ public final class DirectoryPager {
             answer.accept(error(query, DirectoryPage.Result.STALE)); return;
         }
         if (jobs.size() >= MAX_JOBS) { answer.accept(error(query, DirectoryPage.Result.BUSY)); return; }
-        jobs.put(player, new Job(query, now, active, answer));
+        if (favorites.size() > PlayerFavorites.MAX_FAVORITES || favorites.contains(null))
+            throw new IllegalArgumentException("Invalid favorite snapshot");
+        jobs.put(player, new Job(query, favorites, now, active, answer));
     }
     public void cancel(UUID player) { jobs.remove(player); }
 
@@ -42,10 +48,12 @@ public final class DirectoryPager {
             int allowance = Math.min(SLICE, RECORDS_PER_TICK - visited);
             while (allowance-- > 0 && !job.pageComplete() && job.entries.hasNext()) {
                 MachineDirectoryEntry entry = job.entries.next(); visited++;
-                if ((job.query.tab == DirectoryTab.ECONOMY && !data.isSpecial(entry.machineId)) || !entry.matchesSearch(job.search)) continue;
+                if ((job.query.tab == DirectoryTab.ECONOMY && !data.isSpecial(entry.machineId))
+                        || (job.query.tab == DirectoryTab.FAVORITES && !job.favorites.contains(entry.machineId))
+                        || !entry.matchesSearch(job.search)) continue;
                 int matchingIndex = job.total++;
                 if (matchingIndex >= job.query.page * DirectoryQuery.PAGE_SIZE && job.rows.size() < DirectoryQuery.PAGE_SIZE)
-                    job.rows.add(row(entry, registeredDimension));
+                    job.rows.add(row(entry, registeredDimension, job.favorites.contains(entry.machineId)));
             }
             if (!job.pageComplete() && job.entries.hasNext()) jobs.put(player, job);
             else if (job.query.page > 0 && job.rows.isEmpty()) job.answer.accept(error(job.query, DirectoryPage.Result.STALE));
@@ -54,7 +62,7 @@ public final class DirectoryPager {
         }
         return visited;
     }
-    private DirectoryPage.Row row(MachineDirectoryEntry entry, IntPredicate registeredDimension) {
+    private DirectoryPage.Row row(MachineDirectoryEntry entry, IntPredicate registeredDimension, boolean favorite) {
         DirectoryPage.State state;
         if (!registeredDimension.test(entry.address.dimension)) state = DirectoryPage.State.REMOVED_DIMENSION;
         else if (entry.evidence == MachineDirectoryEntry.Evidence.UNSUPPORTED) state = DirectoryPage.State.UNSUPPORTED;
@@ -62,7 +70,7 @@ public final class DirectoryPager {
         else if (data.hasIdentityConflict(entry.machineId)) state = DirectoryPage.State.IDENTITY_CONFLICT;
         else if (entry.evidence == MachineDirectoryEntry.Evidence.HINT) state = DirectoryPage.State.UNVERIFIED;
         else state = DirectoryPage.State.RECORDED;
-        return new DirectoryPage.Row(entry, state);
+        return new DirectoryPage.Row(entry, state, favorite);
     }
     private DirectoryPage error(DirectoryQuery query, DirectoryPage.Result result) {
         return new DirectoryPage(query, result, data.getWorldId(), data.isSupported() ? data.getRevision() : 0,
@@ -76,9 +84,11 @@ public final class DirectoryPager {
         final BooleanSupplier active;
         final Consumer<DirectoryPage> answer;
         final List<DirectoryPage.Row> rows = new ArrayList<>();
+        final Set<UUID> favorites;
         int total;
-        Job(DirectoryQuery query, long now, BooleanSupplier active, Consumer<DirectoryPage> answer) {
+        Job(DirectoryQuery query, Set<UUID> favorites, long now, BooleanSupplier active, Consumer<DirectoryPage> answer) {
             this.query = query; started = now; revision = data.getRevision(); search = DirectoryText.fold(query.search);
+            this.favorites = Collections.unmodifiableSet(new HashSet<>(favorites));
             entries = data.orderedRecords(); this.active = active; this.answer = answer;
         }
         boolean pageComplete() {

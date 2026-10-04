@@ -1,5 +1,36 @@
 # Validation scope and source preparation
 
+## Port.16 logs, totals and favorites — 2026-10-05
+
+- Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`
+  passed on Windows using existing caches and process-local 512 MiB heaps. The live
+  instance's pinned optional API JARs were read only; no game/server was launched.
+- **122 focused JUnit tests in 20 classes passed**, with no failures, errors or skips.
+  Coverage includes the new purchase-total arithmetic (5), favorite client state
+  (5), player favorites (7), transaction logging (8), and existing/extended build,
+  resource, directory, paging, packet, config-sync, receipt and request-ledger tests.
+- Favorite cases cover player/world isolation, stable UUIDs, limits, removed-ID
+  cleanup, preservation of unsupported/corrupt data, immutable snapshots, full-list
+  paging/filtering and protocol bounds. Navigation cannot silently cancel a pending
+  favorite mutation. Stale results are unconfirmed, not falsely reported as saved.
+- Log tests use temporary files and cover JSON escaping, actual partial amounts,
+  no raw NBT, immediate UTF-8 flush, restart append, interrupted-tail separation,
+  rotation limits, replay/failed-trade exclusion and independent failing sinks.
+- Total tests cover invalid batches/offers, multiple items, maximum supported
+  quantities and safe multiplication. GUI source was reviewed for local/remote
+  parity, narrow-width limits, keyboard handling and favorite click coordinates.
+  Automated tests do not render Minecraft; visual accessibility remains unverified.
+- Initial test compilation exposed an outdated NBT method name in a new test;
+  this was corrected. Resource checks also found 11 pre-existing missing Spanish
+  preview keys; those translations were added before the final successful run.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.16.jar`, **364510 bytes**.
+- SHA-256: `5f9491ed3219964694f7449baf18a3a148412e39afae2de5ebc6a6a90754c3e2`.
+- Pending manual checks: totals at actual GUI scales; two players with different
+  favorites; save/restart and death/respawn persistence; local/remote receipts in
+  the host/server log with chat off; slow-disk/real-modpack behavior. Logging is
+  not a crash-atomic journal. The broad gameplay suite was not rerun.
+- Live instance mods/config/saves were not changed. Release notes: [port.16](RELEASE-port.16.md).
+
 ## Port.15 simplified directory rows — 2026-10-04
 
 - Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`

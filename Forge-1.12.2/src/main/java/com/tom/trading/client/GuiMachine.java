@@ -34,6 +34,7 @@ public final class GuiMachine extends GuiContainer {
     private GuiTextField nameField, batchField, quantityField;
     private int popupSlot = -1, tick, nameDirtyAt = -1, lastRevision = -1;
     private boolean consumedMouse;
+    private boolean totalsVisible;
 
     public GuiMachine(ContainerMachine machine) {
         super(machine);
@@ -57,11 +58,12 @@ public final class GuiMachine extends GuiContainer {
                     && s.codePoints().noneMatch(c -> Character.isISOControl(c) || c == 167));
             nameField.setText(machine.view.name);
         } else {
+            String previous = batchField == null ? "1" : batchField.getText();
             batchField = new GuiTextField(1, fontRenderer, guiLeft + 60, guiTop + 63, 34, 16);
             batchField.setMaxStringLength(Integer.toString(TradeLimits.MAX_BATCH_SIZE).length());
             batchField.setValidator(s -> s.isEmpty() || (s.matches("[0-9]{1,4}")
                     && Integer.parseInt(s) <= TradeLimits.MAX_BATCH_SIZE));
-            batchField.setText("1");
+            batchField.setText(previous);
         }
         rebuildButtons();
     }
@@ -102,6 +104,7 @@ public final class GuiMachine extends GuiContainer {
     private void updateButtonAccess() {
         for (GuiButton button : buttonList) {
             button.enabled = machine.session != 0 && (button.id != 1 || (machine.view.offerRevision > 0
+                    && batchField != null && PurchaseTotals.parseBatch(batchField.getText()) > 0
                     && machine.tradeRequests.canSubmit(System.nanoTime())))
                     && (button.id != 30 || !OreFilters.isFilter(machine.view.templates[popupSlot]))
                     && (button.id != 34 || !OreFilters.namesFor(machine.view.templates[popupSlot]).isEmpty());
@@ -164,7 +167,7 @@ public final class GuiMachine extends GuiContainer {
             if (nameDirtyAt >= 0) sendName();
             MachineNetwork.send(new MachineNetwork.OpenTrading(machine));
         } else if (button.id == 1) {
-            int count = boundedNumber(batchField.getText(), TradeLimits.MAX_BATCH_SIZE);
+            int count = PurchaseTotals.parseBatch(batchField.getText());
             if (count != 0) {
                 long requestId = machine.tradeRequests.begin(System.nanoTime());
                 if (requestId == 0) return;
@@ -274,6 +277,11 @@ public final class GuiMachine extends GuiContainer {
             batchField.mouseClicked(mouseX, mouseY, button);
             if (batchField.isFocused()) { consumedMouse = true; return; }
         }
+        if (totalsAt(mouseX, mouseY)) {
+            consumedMouse = true;
+            if (button == 0) totalsVisible = !totalsVisible;
+            return;
+        }
         int slot = definitionAt(mouseX, mouseY);
         if (slot >= 0) {
             consumedMouse = true;
@@ -300,6 +308,10 @@ public final class GuiMachine extends GuiContainer {
 
     @Override
     protected void keyTyped(char character, int key) throws IOException {
+        if (!machine.configuration && key == Keyboard.KEY_F1) {
+            if (!Keyboard.isRepeatEvent()) totalsVisible = !totalsVisible;
+            return;
+        }
         if (popupSlot >= 0) {
             if (key == Keyboard.KEY_ESCAPE) closePopup();
             else if (key == Keyboard.KEY_RETURN) actionPerformed(buttonList.get(1));
@@ -359,6 +371,12 @@ public final class GuiMachine extends GuiContainer {
             itemRender.renderItemOverlayIntoGUI(fontRenderer, stack, x, y, Integer.toString(machine.view.quantities[slot]));
         }
         RenderHelper.disableStandardItemLighting();
+        if (!machine.configuration && batchField != null) {
+            PurchaseTotals totals = PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText());
+            fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, false), 8, PurchaseTotalsDisplay.ROW_Y, 4210752);
+            fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, true), 98, PurchaseTotalsDisplay.ROW_Y, 4210752);
+            fontRenderer.drawString("F1", 82, PurchaseTotalsDisplay.ROW_Y, 0x555555);
+        }
     }
 
     @Override
@@ -394,10 +412,11 @@ public final class GuiMachine extends GuiContainer {
                     lines.add(tr("definition_hint"));
                     lines.add(tr("ghost_hint"));
                 }
-                else lines.add(tr("required_count", machine.view.quantities[slot]));
-                drawHoveringText(lines, mouseX, mouseY);
+                else if (!machine.view.templates[slot].isEmpty()) PurchaseTotalsDisplay.appendItem(lines, machine.view, slot,
+                        PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText()));
+                if (!totalsVisible) drawHoveringText(lines, mouseX, mouseY);
             } else {
-                renderHoveredToolTip(mouseX, mouseY);
+                if (!totalsVisible) renderHoveredToolTip(mouseX, mouseY);
                 for (GuiButton button : buttonList) {
                     if (button.isMouseOver() && button.id >= 10 && button.id < 16) {
                         List<String> lines = new ArrayList<>();
@@ -412,7 +431,17 @@ public final class GuiMachine extends GuiContainer {
             fontRenderer.drawSplitString(I18n.format(machine.feedbackKey, machine.completedTrades),
                     guiLeft, guiTop + ySize + 4, xSize, 0xFFFFFF);
         }
+        if (!machine.configuration && (totalsVisible || totalsAt(mouseX, mouseY))) {
+            drawHoveringText(PurchaseTotalsDisplay.details(machine.view,
+                            PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText()), fontRenderer, width),
+                    PurchaseTotalsDisplay.tooltipX(width), totalsVisible ? guiTop + PurchaseTotalsDisplay.ROW_Y : mouseY);
+        }
         GlStateManager.enableDepth();
+    }
+
+    private boolean totalsAt(int x, int y) {
+        return !machine.configuration && x >= guiLeft + 8 && x < guiLeft + 168
+                && y >= guiTop + PurchaseTotalsDisplay.ROW_Y && y < guiTop + PurchaseTotalsDisplay.ROW_Y + 9;
     }
 
     @Override

@@ -56,6 +56,7 @@ public final class DirectoryNetwork {
                 optionalUuid(b, entry.machineId); optionalUuid(b, entry.ownerId);
                 b.writeString(entry.ownerName); b.writeString(entry.name);
                 b.writeByte(entry.evidence.ordinal()); b.writeByte(row.state.ordinal());
+                b.writeBoolean(row.favorite);
                 OfferPreviewCodec.write(b, entry.preview);
             }
             if (bytes.writerIndex() - start > MAX_PAGE_BYTES) throw new IllegalArgumentException("Directory page exceeds limit");
@@ -77,8 +78,9 @@ public final class DirectoryNetwork {
                     String owner = label(b), name = label(b);
                     MachineDirectoryEntry.Evidence evidence = enumeration(b, MachineDirectoryEntry.Evidence.values());
                     DirectoryPage.State state = enumeration(b, DirectoryPage.State.values());
+                    boolean favorite = bool(b);
                     OfferPreview preview = OfferPreviewCodec.read(b);
-                    rows.add(new DirectoryPage.Row(new MachineDirectoryEntry(address, machineId, ownerId, owner, name, evidence, preview), state));
+                    rows.add(new DirectoryPage.Row(new MachineDirectoryEntry(address, machineId, ownerId, owner, name, evidence, preview), state, favorite));
                 }
                 page = new DirectoryPage(query, result, worldId, revision, total, complete, rows, specialTabName);
                 valid = !b.isReadable();
@@ -88,11 +90,15 @@ public final class DirectoryNetwork {
     private static void writeQuery(PacketBuffer b, DirectoryQuery query) {
         b.writeUniqueId(query.screenId); b.writeLong(query.requestId); b.writeInt(query.playerDimension);
         b.writeVarInt(query.page); optionalUuid(b, query.expectedWorld); b.writeLong(query.expectedRevision); b.writeString(query.search);
+        optionalUuid(b, query.favoriteMachine); b.writeBoolean(query.favoriteValue);
         b.writeByte(query.tab.ordinal());
     }
     private static DirectoryQuery readQuery(PacketBuffer b) {
-        return new DirectoryQuery(b.readUniqueId(), b.readLong(), b.readInt(), b.readVarInt(),
-                optionalUuid(b), b.readLong(), label(b), enumeration(b, DirectoryTab.values()));
+        UUID screenId = b.readUniqueId(); long requestId = b.readLong(); int dimension = b.readInt(), page = b.readVarInt();
+        UUID worldId = optionalUuid(b); long revision = b.readLong(); String search = label(b);
+        UUID favoriteMachine = optionalUuid(b); boolean favoriteValue = bool(b);
+        return new DirectoryQuery(screenId, requestId, dimension, page, worldId, revision, search,
+                enumeration(b, DirectoryTab.values()), favoriteMachine, favoriteValue);
     }
     private static String label(PacketBuffer b) {
         String value = b.readString(DirectoryText.MAX_CHARACTERS * 2);
@@ -134,13 +140,33 @@ public final class DirectoryNetwork {
                                     0, false, Collections.emptyList()));
                             return;
                         }
-                        data.pager().submit(player.getUniqueID(), query, System.nanoTime(), () -> active(player, query),
+                        data.pager().cancel(player.getUniqueID());
+                        if (query.favoriteMachine != null) {
+                            DirectoryPage.Result mutation = PlayerFavorites.apply(player.getEntityData(), data, query);
+                            if (mutation != DirectoryPage.Result.OK) {
+                                sendIfActive(player, error(data, query, mutation));
+                                return;
+                            }
+                        }
+                        Set<UUID> favorites;
+                        try {
+                            favorites = data.isSupported() ? PlayerFavorites.read(player.getEntityData(), data.getWorldId())
+                                    : Collections.emptySet();
+                        } catch (IllegalStateException invalidFavorites) {
+                            sendIfActive(player, error(data, query, DirectoryPage.Result.UNAVAILABLE));
+                            return;
+                        }
+                        data.pager().submit(player.getUniqueID(), query, favorites, System.nanoTime(), () -> active(player, query),
                                 result -> sendIfActive(player, result));
                     } finally { synchronized (QUEUED) { QUEUED.remove(player); } }
                 });
             } catch (RuntimeException stopped) { synchronized (QUEUED) { QUEUED.remove(player); } }
             return null;
         }
+    }
+    private static DirectoryPage error(MachineDirectoryData data, DirectoryQuery query, DirectoryPage.Result result) {
+        return new DirectoryPage(query, result, data.getWorldId(), data.isSupported() ? data.getRevision() : 0,
+                0, false, Collections.emptyList());
     }
     private static void sendIfActive(EntityPlayerMP player, DirectoryPage page) {
         if (!active(player, page.query)) return;
