@@ -29,6 +29,14 @@ Substantial port implementation, testing code, translations and documentation
 were produced with generative-AI assistance, with human requirements and gameplay
 testing. This disclosure applies to our port contribution, not the upstream work.
 
+## Publication images
+
+The port's `images/icon.png` was generated using ChatGPT and supplied by RPM147.
+It is unofficial branding artwork, not an upstream logo or a screenshot of the
+actual machine model. The five other PNG files in `images/` are gameplay screenshots
+supplied by RPM147, with some player names redacted. They show a modded environment;
+third-party game assets and modpack items retain their respective attribution.
+
 ## Dependencies
 
 Minecraft/Forge and optional integration APIs retain their respective ownership

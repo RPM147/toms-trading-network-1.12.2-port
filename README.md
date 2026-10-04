@@ -1,5 +1,7 @@
 # Tom's Trading Network — Unofficial 1.12.2 Port
 
+<img src="images/icon.png" alt="Unofficial port icon: a stylized vending machine with emerald and coin exchange symbols" width="192" height="192">
+
 An **unofficial native Minecraft 1.12.2 / Forge port** of
 [Tom's Trading Network by tom5454](https://github.com/tom5454/Toms-Trading-Network).
 This repository is independent of the original project's releases and support.
@@ -32,6 +34,45 @@ manual verification have different scopes; see [validation](docs/VALIDATION.md).
 The Currency & Tax tab is a shared category, **not automatic tax collection** or
 a new currency/account system. Cached offers are not stock or permission guarantees.
 Browsing does not load chunks. Old machines may need discovery before appearing.
+
+## Screenshots
+
+Actual gameplay screenshots supplied by the maintainer. Some player names have
+been redacted for privacy. Modpack-specific items, including the pictured coins,
+come from other mods; this port does not add a currency item system.
+The AI-generated project icon above is branding artwork, not an in-game render.
+
+### Vending machines in the world
+
+![Vending machines in a player-built shop](images/vending%20slots.png)
+
+### Machine directory and offer previews
+
+Browse recorded offers with product/payment previews and search by item, machine
+or owner. Opening a listing performs fresh access and offer checks.
+
+![Machine directory with product and payment previews; player names redacted](images/remote%20buy%20page.png)
+
+### Shared Currency & Tax tab
+
+Administrators choose which machines appear in this shared category. These are
+server-configured trades, not automatic tax collection.
+
+![Currency and Tax tab with server-configured machines; player names redacted](images/currency%20and%20tax%20page.png)
+
+### Remote trading
+
+Review the payment and received items, choose the number of trades, then confirm.
+This trade-only screen does not expose a machine's private inventory.
+
+![Remote trade confirmation for iron ingots exchanged for diamonds](images/trade%20page.png)
+
+### Owner management
+
+The owner's management screen exposes offer configuration, sale stock and earnings.
+These private inventory slots are not available to ordinary customers.
+
+![Owner management screen showing offer configuration, sale stock and earnings](images/vending%20machine%20right%20click.png)
 
 ## Requirements and installation
 
