@@ -26,6 +26,7 @@ public class BuildInfoTest {
             assertTrue(mod.acceptsPeer(java.util.Collections.singletonMap(BuildInfo.MOD_ID, BuildInfo.VERSION), side));
             org.junit.Assert.assertFalse(mod.acceptsPeer(java.util.Collections.singletonMap(BuildInfo.MOD_ID, "0.3.4-port.4"), side));
             org.junit.Assert.assertFalse(mod.acceptsPeer(java.util.Collections.singletonMap(BuildInfo.MOD_ID, "0.3.4-port.6"), side));
+            org.junit.Assert.assertFalse(mod.acceptsPeer(java.util.Collections.singletonMap(BuildInfo.MOD_ID, "0.3.4-port.13"), side));
             org.junit.Assert.assertFalse(mod.acceptsPeer(java.util.Collections.emptyMap(), side));
         }
     }

@@ -3,6 +3,7 @@ package com.tom.trading.network;
 import com.tom.trading.TradingNetworkMod;
 import com.tom.trading.BuildInfo;
 import com.tom.trading.directory.*;
+import com.tom.trading.remote.RemoteSettings;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.PacketBuffer;
@@ -46,6 +47,7 @@ public final class DirectoryNetwork {
             PacketBuffer b = new PacketBuffer(bytes);
             writeQuery(b, page.query); b.writeByte(page.result.ordinal()); optionalUuid(b, page.worldId);
             b.writeLong(page.revision); b.writeVarInt(page.total); b.writeBoolean(page.backfillComplete);
+            b.writeString(page.specialTabName);
             b.writeVarInt(page.rows.size());
             for (DirectoryPage.Row row : page.rows) {
                 MachineDirectoryEntry entry = row.entry;
@@ -66,7 +68,7 @@ public final class DirectoryNetwork {
                 DirectoryQuery query = readQuery(b);
                 DirectoryPage.Result result = enumeration(b, DirectoryPage.Result.values());
                 UUID worldId = optionalUuid(b); long revision = b.readLong(); int total = b.readVarInt();
-                boolean complete = bool(b); int count = b.readVarInt();
+                boolean complete = bool(b); String specialTabName = label(b); int count = b.readVarInt();
                 if (count < 0 || count > DirectoryQuery.PAGE_SIZE) return;
                 List<DirectoryPage.Row> rows = new ArrayList<>();
                 for (int i = 0; i < count; i++) {
@@ -78,7 +80,7 @@ public final class DirectoryNetwork {
                     OfferPreview preview = OfferPreviewCodec.read(b);
                     rows.add(new DirectoryPage.Row(new MachineDirectoryEntry(address, machineId, ownerId, owner, name, evidence, preview), state));
                 }
-                page = new DirectoryPage(query, result, worldId, revision, total, complete, rows);
+                page = new DirectoryPage(query, result, worldId, revision, total, complete, rows, specialTabName);
                 valid = !b.isReadable();
             } catch (RuntimeException malformed) { valid = false; }
         }
@@ -142,7 +144,8 @@ public final class DirectoryNetwork {
     }
     private static void sendIfActive(EntityPlayerMP player, DirectoryPage page) {
         if (!active(player, page.query)) return;
-        try { MachineNetwork.CHANNEL.sendTo(new Page(page), player); }
+        // Stamp every reply, including empty/error pages, from the server configuration only.
+        try { MachineNetwork.CHANNEL.sendTo(new Page(page.withSpecialTabName(RemoteSettings.specialTabLabel())), player); }
         catch (RuntimeException failure) {
             // Never retry a reply or abort the world tick; retain diagnostics for unexpected codec failures too.
             org.apache.logging.log4j.LogManager.getLogger(BuildInfo.MOD_ID).debug("Directory reply was not delivered", failure);

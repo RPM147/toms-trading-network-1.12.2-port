@@ -6,6 +6,49 @@ import java.util.*;
 import static org.junit.Assert.*;
 
 public class DirectoryClientStateTest {
+    @Test public void serverTabNameSurvivesTabSwitchButNotOldRepliesOrNewScreens() {
+        DirectoryClientState state = new DirectoryClientState(0, NOW);
+        assertEquals("", state.specialTabName());
+        DirectoryPage first = response(state.poll(NOW)).withSpecialTabName("Server Shops");
+        assertTrue(state.accept(first, NOW)); assertEquals("Server Shops", state.specialTabName());
+        state.setTab(DirectoryTab.ECONOMY, NOW);
+        assertEquals("Server Shops", state.specialTabName());
+        DirectoryQuery pending = state.poll(NOW + 600_000_000L);
+        assertFalse(state.accept(first.withSpecialTabName("Stale server name"), NOW));
+        assertEquals("Server Shops", state.specialTabName());
+        assertTrue(state.accept(response(pending).withSpecialTabName("Event Shops"), NOW));
+        assertEquals("Event Shops", state.specialTabName());
+        DirectoryClientState other = new DirectoryClientState(0, NOW);
+        assertEquals("", other.specialTabName());
+        state.close(); assertEquals("", state.specialTabName());
+        assertFalse(state.accept(first, NOW)); assertEquals("", state.specialTabName());
+    }
+
+    @Test public void errorRepliesCarryTheLabelAndBlankRestoresTheTranslatedDefault() {
+        DirectoryClientState state = new DirectoryClientState(0, NOW);
+        DirectoryQuery first = state.poll(NOW);
+        assertTrue(state.accept(new DirectoryPage(first, DirectoryPage.Result.UNAVAILABLE, null, 0, 0, false,
+                Collections.emptyList(), "Community Shops"), NOW));
+        assertEquals("Community Shops", state.specialTabName());
+        state.refresh(NOW);
+        assertTrue(state.accept(response(state.poll(NOW + 600_000_000L)), NOW));
+        assertEquals("", state.specialTabName());
+    }
+
+    @Test public void clientConfigDoesNotOverrideTheServerDisplayName() {
+        String original = com.tom.trading.remote.RemoteSettings.specialTabName;
+        try {
+            com.tom.trading.remote.RemoteSettings.specialTabName = "Client Override";
+            DirectoryClientState state = new DirectoryClientState(0, NOW);
+            assertEquals("", state.specialTabName());
+            assertTrue(state.accept(response(state.poll(NOW)).withSpecialTabName("Server Shops"), NOW));
+            assertEquals("Server Shops", state.specialTabName());
+            state.refresh(NOW);
+            assertTrue(state.accept(response(state.poll(NOW + 600_000_000L)), NOW));
+            assertEquals("", state.specialTabName());
+        } finally { com.tom.trading.remote.RemoteSettings.specialTabName = original; }
+    }
+
     @Test public void switchingTabsRejectsOldAndWrongTabResponsesAndClearsSelection() {
         DirectoryClientState state = new DirectoryClientState(0, NOW);
         DirectoryQuery original = state.poll(NOW); DirectoryPage shown = response(original);

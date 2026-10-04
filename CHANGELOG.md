@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.4-port.14
+
+- Added server-side `general.specialTabName` in `config/toms_trading_network.cfg`
+  for the administrator-selected shared directory tab. Empty retains the
+  translated Currency & Tax default; custom names support other uses such as
+  server shops or event vendors. Restart the server/host after editing.
+- Sync the bounded plain-text label to every player; local client settings cannot
+  override it. Long button labels have ellipsis, full hover text and F1 details.
+- Administration command replies use the configured name. Existing machine
+  membership, inventories, ownership, trading rules and saved schemas are unchanged.
+- Directory replies now include the label. Upgrade server/host and all clients
+  together; port.13 and port.14 cannot connect to each other.
+- Published as a regular release, not a pre-release. This channel choice does not
+  imply universal compatibility; see the documented validation scope.
+
 ## 0.3.4-port.13 — Beta
 
 - Updated the displayed mod name, canonical repository URL and port maintainer credits.

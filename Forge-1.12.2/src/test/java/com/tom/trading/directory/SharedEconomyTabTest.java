@@ -48,6 +48,16 @@ public class SharedEconomyTabTest {
         assertTrue(data.isSupported()); assertEquals(original.getWorldId(), data.getWorldId()); assertEquals(1, data.size());
         assertTrue(data.specialMachines().isEmpty()); assertEquals(2, data.writeToNBT(new NBTTagCompound()).getInteger("Format"));
     }
+    @Test public void changingOnlyTabLabelDoesNotChangeMembershipOrSavedSchema() {
+        MachineDirectoryData data = MachineDirectoryData.create();
+        MachineDirectoryEntry e = entry(0, UUID.randomUUID(), "Shop"); data.observe(e); data.addSpecial(e.address, e.machineId);
+        NBTTagCompound before = data.writeToNBT(new NBTTagCompound());
+        DirectoryPage original = page(data, query(data, 0, "", DirectoryTab.ECONOMY));
+        DirectoryPage renamed = original.withSpecialTabName("Community Shops");
+        assertEquals(original.rows, renamed.rows); assertEquals(original.revision, renamed.revision);
+        assertEquals(original.worldId, renamed.worldId); assertTrue(data.isSpecial(e.machineId));
+        assertEquals(before, data.writeToNBT(new NBTTagCompound()));
+    }
     @Test public void malformedMembershipIsPreservedAndFailsClosed() {
         for (int mode = 0; mode < 6; mode++) {
             NBTTagCompound tag = MachineDirectoryData.create().writeToNBT(new NBTTagCompound());

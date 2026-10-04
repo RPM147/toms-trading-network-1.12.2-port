@@ -79,6 +79,7 @@ public class RemoteSettingsConfigTest {
         assertFalse(config.hasKey("general", "MAX_CHUNKS_PER_TARGET"));
         assertTrue(config.hasKey("general", "maxLeasedChunks"));
         assertTrue(config.hasKey("general", "remoteTrading"));
+        assertEquals("", config.get("general", "specialTabName", "").getString());
     }
 
     @Test public void savedUserSettingsSurviveStartupAndSubsequentResync() throws Exception {
@@ -101,6 +102,29 @@ public class RemoteSettingsConfigTest {
         config.get("general", "MAX_CHUNKS_PER_TARGET", 999999).set(999999);
         sync(config, true); sync(config, false);
         assertEquals(25, actualHardLimit());
+    }
+
+    @Test public void customTabNameSurvivesRealForgeSaveLoadAndResync() throws Exception {
+        File file = new File(temp.getRoot(), "custom-tab.cfg");
+        Configuration config = new Configuration(file);
+        config.get("general", "specialTabName", "").set("Sunucu Mağazaları — Shops");
+        config.save();
+        Configuration reloaded = new Configuration(file); reloaded.load();
+        sync(reloaded, true); sync(reloaded, false);
+        assertEquals("Sunucu Mağazaları — Shops", RemoteSettings.specialTabLabel());
+        assertTrue(RemoteSettings.class.getField("specialTabName").isAnnotationPresent(Config.RequiresMcRestart.class));
+    }
+
+    @Test public void tabNameSanitizesControlsBoundsUnicodeAndKeepsBlankFallback() {
+        for (String value : new String[]{null, "", " \n\t\u202E\u00a7 "}) {
+            RemoteSettings.specialTabName = value; assertEquals("", RemoteSettings.specialTabLabel());
+        }
+        RemoteSettings.specialTabName = "  Server\n Shops\u202E\uD800  ";
+        assertEquals("Server Shops", RemoteSettings.specialTabLabel());
+        RemoteSettings.specialTabName = String.join("", java.util.Collections.nCopies(65, "\uD83D\uDED2"));
+        String label = RemoteSettings.specialTabLabel();
+        assertEquals(64, label.codePointCount(0, label.length()));
+        assertTrue(com.tom.trading.directory.DirectoryText.valid(label));
     }
 
     @Test public void everyPublicStaticFinalFieldIsExcludedFromForgeConfigDiscovery() {

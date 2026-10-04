@@ -69,11 +69,17 @@ public final class GuiMachineDirectory extends GuiScreen {
         return entry.ownerName.isEmpty() ? entry.ownerId.toString().substring(0, 8) : entry.ownerName;
     }
     private static String status(DirectoryPage.Row row) { return tr("row." + row.state.name().toLowerCase(Locale.ROOT)); }
+    private String specialTabName() {
+        return state.specialTabName().isEmpty() ? tr("tab.economy") : state.specialTabName();
+    }
+    private String fit(String value, int width) {
+        if (width <= 0) return "";
+        return fontRenderer.getStringWidth(value) <= width ? value
+                : fontRenderer.trimStringToWidth(value, Math.max(0, width - fontRenderer.getStringWidth("..."))) + "...";
+    }
     private void text(String value, int x, int y, int width, int color) {
         if (width <= 0) return;
-        String visible = fontRenderer.getStringWidth(value) <= width ? value
-                : fontRenderer.trimStringToWidth(value, Math.max(0, width - fontRenderer.getStringWidth("..."))) + "...";
-        fontRenderer.drawString(visible, x, y, color);
+        fontRenderer.drawString(fit(value, width), x, y, color);
     }
     @Override public void initGui() {
         if (mc.player == null || mc.world == null || mc.getConnection() == null) { mc.displayGuiScreen(null); return; }
@@ -138,6 +144,7 @@ public final class GuiMachineDirectory extends GuiScreen {
     public void receive(DirectoryPage page) {
         if (state != null && state.accept(page, System.nanoTime())) {
             renderedPage = null;
+            cachedDetails = null;
             previewIcons.clear();
             search.setText(state.search());
             if (entries != null) { entries.scrollBy(-100000); entries.scrollBy(state.consumeRestoredScroll()); }
@@ -153,7 +160,7 @@ public final class GuiMachineDirectory extends GuiScreen {
         allTab.enabled = !opening.waiting() && state.tab() != DirectoryTab.ALL;
         economyTab.enabled = !opening.waiting() && state.tab() != DirectoryTab.ECONOMY;
         allTab.displayString = (state.tab() == DirectoryTab.ALL ? "> " : "") + tr("tab.all");
-        economyTab.displayString = (state.tab() == DirectoryTab.ECONOMY ? "> " : "") + tr("tab.economy");
+        economyTab.displayString = fit((state.tab() == DirectoryTab.ECONOMY ? "> " : "") + specialTabName(), economyTab.width - 12);
         for (GuiButton button : buttonList) button.visible = details ? button.id >= 8 : button.id < 8;
         for (GuiButton button : buttonList) {
             if (button.id == 9) button.enabled = detailPage > 0;
@@ -289,6 +296,11 @@ public final class GuiMachineDirectory extends GuiScreen {
         } else for (GuiButton button : buttonList) if (button.id == focus && button.visible)
             drawRect(button.x, button.y + button.height - 2, button.x + button.width, button.y + button.height, 0xFF99DDFF);
         if (details) return;
+        if (economyTab.visible && mouseX >= economyTab.x && mouseX < economyTab.x + economyTab.width
+                && mouseY >= economyTab.y && mouseY < economyTab.y + economyTab.height) {
+            drawHoveringText(fontRenderer.listFormattedStringToWidth(specialTabName(), Math.max(80, panelWidth - 24)), mouseX, mouseY);
+            return;
+        }
         if (hoveredPreview != null) {
             List<String> tooltip = new ArrayList<>();
             tooltip.add(previewName(hoveredPreview));
@@ -337,6 +349,7 @@ public final class GuiMachineDirectory extends GuiScreen {
                 && cachedDetailsPage == state.page() && cachedDetailsSelection == state.selected()) return cachedDetails;
         List<String> text = new ArrayList<>();
         text.add(feedback); text.add(tr("keyboard_help")); text.add(tr("search_help"));
+        text.add(tr("tab.shared_name", specialTabName()));
         if (state.page() != null) text.add(tr(state.page().backfillComplete ? "coverage_snapshot" : "coverage_incomplete"));
         DirectoryPage.Row selected = state.selected();
         if (selected != null) {

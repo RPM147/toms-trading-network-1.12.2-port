@@ -22,8 +22,15 @@ third-party mod combination. Gameplay remains server-authoritative.
   address-ordered metadata, stable MachineUUID and explicit conflict handling.
 - Current schemas: directory 2 (reads 1), machine tile 3, offer preview 1.
   Unknown/corrupt directory or tile data is not silently overwritten.
-- At most 100000 directory records and 256 shared Currency & Tax memberships.
+- At most 100000 directory records and 256 shared-tab memberships.
   Membership is presentation, not a permission or economic authority.
+- Port.14 adds a bounded plain-text shared-tab label to server-to-client directory
+  replies, including empty/error results. Only the server reads `specialTabName`;
+  accepted screen-correlated replies update the client's display label. Blank
+  selects a translated default; client config and return bookmarks cannot override
+  the server label. No new client-to-server setting or world-data field is added.
+  Exact-version peer checks reject pre-port.14 clients/servers. Existing saved
+  membership, filter enum and directory/tile/preview schemas are unchanged.
 - Query scans use a shared 4096-record/tick budget, 64 jobs and 256-record slices.
   Pages hold at most 50 rows / 64 KiB; preview payloads are bounded public data,
   without raw item NBT, earnings or real stock.

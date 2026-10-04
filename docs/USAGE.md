@@ -57,11 +57,38 @@ Tab toggles focus on the quantity field and Enter in that field purchases. Holdi
 Enter does not repeatedly issue purchases. Do not infer a failed purchase from a
 missing network reply: check inventory/server state rather than blindly retrying.
 
-## Shared Currency & Tax tab
+## Shared tab (Currency & Tax by default)
 
 All players see the same administrator-selected category. Members also appear in
 All machines. The category neither enables creative mode nor automatically charges
 taxes, changes prices, grants ownership, or bypasses protection.
+
+### Rename the shared category
+
+Since port.14 the display name is set by the server/host in
+`config/toms_trading_network.cfg`, inside the `general` category:
+
+```text
+S:specialTabName=Server Shops
+```
+
+Launch the mod once to generate its config if needed, stop the server/host, edit
+the existing setting, and start again. For singleplayer or Open to LAN, edit the
+hosting instance's config. Connected players receive the server's name; a remote
+client's local config cannot replace it. Use the same port.14 JAR on every peer.
+
+An empty value keeps the translated Currency & Tax default. Custom names are
+sent literally (not translated), trimmed, and limited to 64 Unicode characters.
+Control, formatting and invalid surrogate characters are removed. Button text
+is shortened to fit; hovering or F1 shows the full label. Before the first server
+reply, the UI uses its translated default. Names are not cached across connections.
+
+The category is not restricted to currency or tax machines: event vendors,
+community shops and resource exchanges can all use the same existing commands.
+Renaming requires no re-adding of machines and does not alter saved membership,
+ownership, trade rules or protection checks.
+
+### Manage membership
 
 Level-2 administrator commands:
 

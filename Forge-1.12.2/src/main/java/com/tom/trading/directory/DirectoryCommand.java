@@ -11,6 +11,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraftforge.common.DimensionManager;
 import com.tom.trading.tile.TileVendingMachine;
+import com.tom.trading.remote.RemoteSettings;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -107,6 +108,8 @@ public final class DirectoryCommand extends CommandBase {
         }
     }
     private void special(ICommandSender sender, String[] args, MachineDirectoryData data) throws CommandException, IOException {
+        String label = RemoteSettings.specialTabLabel();
+        if (label.isEmpty()) label = "Currency & Tax";
         if (args.length == 6 && args[1].equals("add")) {
             MachineAddress address = new MachineAddress(parseInt(args[2]), parseInt(args[3]), parseInt(args[4]), parseInt(args[5]));
             WorldServer target = DimensionManager.getWorld(address.dimension);
@@ -120,18 +123,18 @@ public final class DirectoryCommand extends CommandBase {
             if (entry == null || !java.util.Objects.equals(entry.machineId, machine.getMachineUuid()))
                 throw new IOException("Target could not be registered");
             boolean changed = data.addSpecial(address, entry.machineId);
-            sender.sendMessage(new TextComponentString("Currency & Tax: " + entry.machineId + (changed ? " added." : " already listed.")
+            sender.sendMessage(new TextComponentString(label + ": " + entry.machineId + (changed ? " added." : " already listed.")
                     + " Ownership, creative mode and trade rules unchanged. Refresh the directory to see changes."));
         } else if (args.length == 3 && args[1].equals("remove")) {
             UUID id = UUID.fromString(args[2]);
             if (!id.toString().equalsIgnoreCase(args[2])) throw new IllegalArgumentException("Use a full canonical machine UUID");
-            sender.sendMessage(new TextComponentString("Currency & Tax: " + id
+            sender.sendMessage(new TextComponentString(label + ": " + id
                     + (data.removeSpecial(id) ? " removed. Refresh the directory to see changes." : " is not listed.")));
         } else if ((args.length == 2 || args.length == 3) && args[1].equals("list")) {
             List<UUID> ids = data.specialMachines();
             int pages = Math.max(1, (ids.size() + 9) / 10);
             int page = args.length == 3 ? parseInt(args[2], 1, pages) : 1;
-            sender.sendMessage(new TextComponentString("Currency & Tax: " + ids.size() + "/" + MachineDirectoryData.MAX_SPECIAL
+            sender.sendMessage(new TextComponentString(label + ": " + ids.size() + "/" + MachineDirectoryData.MAX_SPECIAL
                     + "; page " + page + "/" + pages + ". Remove with /ttndirectory special remove <uuid>"));
             for (int i = (page - 1) * 10; i < Math.min(ids.size(), page * 10); i++)
                 sender.sendMessage(new TextComponentString(ids.get(i).toString()));

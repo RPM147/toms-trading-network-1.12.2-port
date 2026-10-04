@@ -1,5 +1,27 @@
 # Validation scope and source preparation
 
+## Port.14 configurable shared tab — 2026-10-04
+
+- Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`
+  passed on Windows with existing dependency caches. Build processes were limited
+  to 512 MiB heaps and one Gradle worker; no live instance was modified or launched.
+- **49 focused JUnit tests in seven classes passed**, with zero failures, errors
+  or skips: BuildInfoTest (3), RemoteSettingsConfigTest (7), DirectoryNetworkTest
+  (10), DirectoryClientStateTest (8), DirectoryReturnTest (6), SharedEconomyTabTest
+  (9), DirectoryPagerTest (6).
+- Coverage includes real Forge config save/load/sync, empty/custom/Unicode labels,
+  text sanitization, invalid/truncated/oversized packets, maximum-size pages with
+  the new label, stale reply rejection, client-config isolation, screen reset,
+  unchanged saved membership, paging and exact-version peer rejection.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.14.jar`, **344824 bytes**.
+- SHA-256: `7013dc01d7537910e4059da47ac1ea00002b1fbe5ad65dd902852162423ae6b2`.
+- The actual rendered tooltip/button at different GUI scales, a fresh two-client
+  config-sync session and the full gameplay regression suite were not rerun for
+  this change. Previous multiplayer feedback is not a port.14 runtime test.
+- Port.14 uses the regular release channel (not pre-release) at the maintainer's
+  request. The channel label is not a compatibility or runtime certification.
+  See [release notes](RELEASE-port.14.md).
+
 ## Port.13 package checks — 2026-10-04
 
 - Java 8 compilation, reobfuscation, deterministic release packaging and

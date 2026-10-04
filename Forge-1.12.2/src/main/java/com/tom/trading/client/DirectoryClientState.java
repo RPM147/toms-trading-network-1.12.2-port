@@ -17,6 +17,7 @@ public final class DirectoryClientState {
     private int pageNumber, staleRetries;
     private boolean dirty = true, closed;
     private String search = "", status = "loading";
+    private String specialTabName = "";
     private DirectoryTab tab = DirectoryTab.ALL;
     private DirectoryQuery pending;
     private DirectoryPage page;
@@ -59,6 +60,7 @@ public final class DirectoryClientState {
     public DirectoryClientState(int dimension, long now) { this.dimension = dimension; due = nextSend = now; }
     public String search() { return search; }
     public DirectoryTab tab() { return tab; }
+    public String specialTabName() { return specialTabName; }
     public void setTab(DirectoryTab next, long now) {
         if (closed || next == null || next == tab) return;
         restoring = null; tab = next; reset(now); staleRetries = 0;
@@ -101,7 +103,7 @@ public final class DirectoryClientState {
                 || response.query.tab != tab || !response.query.search.equals(search) || response.query.page != pageNumber
                 || !java.util.Objects.equals(response.query.expectedWorld, pending.expectedWorld)
                 || response.query.expectedRevision != pending.expectedRevision) return false;
-        pending = null; selected = null;
+        pending = null; selected = null; specialTabName = response.specialTabName;
         if (response.result == DirectoryPage.Result.OK) {
             page = response; worldId = response.worldId; revision = response.revision;
             if (restoring != null) {
@@ -132,5 +134,5 @@ public final class DirectoryClientState {
         if (closed || waiting() || page == null || page != rendered || !page.rows.contains(row)) return false;
         selected = row; return true;
     }
-    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; }
+    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; specialTabName = ""; }
 }

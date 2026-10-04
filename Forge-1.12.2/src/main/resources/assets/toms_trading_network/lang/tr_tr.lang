@@ -73,6 +73,7 @@ gui.toms_trading_network.directory.preview_generic_icon=Genel ikon: eşyanın ö
 gui.toms_trading_network.directory.preview_cached=Son kayıtlı teklif; stok garantisi değildir. Doğrulamak için takası aç.
 gui.toms_trading_network.directory.tab.all=Tüm makineler
 gui.toms_trading_network.directory.tab.economy=Döviz ve Vergi
+gui.toms_trading_network.directory.tab.shared_name=Ortak sekme: %s
 gui.toms_trading_network.directory.tab.economy_empty=Listelenen makine yok. Yöneticiden /ttndirectory special add ile eklemesini iste.
 gui.toms_trading_network.directory.product=Alınacak: %s
 gui.toms_trading_network.directory.price=Ödeme: %s

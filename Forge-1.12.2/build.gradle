@@ -18,7 +18,7 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-version = '0.3.4-port.13'
+version = '0.3.4-port.14'
 group = 'com.tom.trading'
 archivesBaseName = 'toms_trading_network-1.12.2'
 

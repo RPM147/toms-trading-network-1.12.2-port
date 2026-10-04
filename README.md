@@ -11,8 +11,8 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current package version: **0.3.4-port.13 (Beta)**, based on port.12 gameplay.
-Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.13),
+Current package version: **0.3.4-port.14**, adding a server-configurable shared tab name.
+Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.14),
 not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
 user-reported experience, not a runtime test of the new package. Automated and
@@ -27,7 +27,8 @@ manual verification have different scopes; see [validation](docs/VALIDATION.md).
 - Product/payment previews and search by recorded item, machine or owner name.
 - Remote trade-only access with bounded temporary chunk loading and live target checks.
 - Optional public chat receipts for successful trades.
-- A server-managed **Currency & Tax** tab for selected machine UUIDs.
+- A server-managed shared tab for selected machine UUIDs, with a configurable name
+  (defaults to **Currency & Tax**).
 - Search/tab/page/scroll restoration after returning from a trade, keyboard navigation
   and full error/help details with **F1**.
 
@@ -93,6 +94,30 @@ BETA-named JAR) and Electroblob's Wizardry **4.3.19**. Unsupported or unverifiab
 protection cannot silently authorize remote access. Other versions and arbitrary
 claim mods are not universally certified. See [architecture](docs/ARCHITECTURE.md).
 
+## Shared tab name
+
+The shared category can be used for server shops, event vendors, exchanges, or
+any other selection of machines. To rename it, stop the server/host and edit
+`config/toms_trading_network.cfg`, under `general`:
+
+```text
+S:specialTabName=Server Shops
+```
+
+Start the server/host again. If the file has not been generated yet, launch the
+mod once and stop it before editing. The server sends this name to every player;
+clients do not need matching config files and cannot override it locally.
+For singleplayer/LAN, edit the hosting instance's config.
+
+Leave the value empty (`S:specialTabName=`) to keep the translated **Currency & Tax**
+default. Names are trimmed plain text, limited to 64 Unicode characters; control
+and formatting characters are removed. Long names are shortened on the button;
+hover over it or press F1 to read the full name. Renaming does not change machine
+membership, ownership, creative mode, prices or permissions.
+
+**Update the server/host and all clients to port.14.** The directory packet now
+includes the label; older port versions cannot connect.
+
 ## Administrator commands
 
 These commands require **permission level 2**. Normal players use **G** (rebindable)
@@ -100,7 +125,7 @@ to browse shops; they do not need administrator commands to trade.
 
 | Command | Purpose |
 |---|---|
-| `/ttndirectory special add <dimension> <x> <y> <z>` | Add a loaded machine to the shared Currency & Tax tab. |
+| `/ttndirectory special add <dimension> <x> <y> <z>` | Add a loaded machine to the shared tab (Currency & Tax by default). |
 | `/ttndirectory special list [page]` | List selected machine UUIDs; page is optional. |
 | `/ttndirectory special remove <machine-uuid>` | Remove tab membership, not the machine or its items. |
 | `/ttndirectory status` | Show directory state and identity conflict count. |

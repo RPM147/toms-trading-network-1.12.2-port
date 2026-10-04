@@ -1,11 +1,17 @@
 package com.tom.trading.remote;
 
 import com.tom.trading.BuildInfo;
+import com.tom.trading.directory.DirectoryText;
 import net.minecraftforge.common.config.Config;
 
 /** Server values are authoritative. Hard ceilings cannot be expanded by malformed config values. */
 @Config(modid = BuildInfo.MOD_ID)
 public final class RemoteSettings {
+    @Config.RequiresMcRestart
+    @Config.Comment({"Server-wide display name of the administrator-selected directory tab (for example Server Shops).",
+            "Blank keeps the translated Currency & Tax default. Sent by the server; client config cannot override it.",
+            "Plain text only, limited to 64 Unicode characters. Restart the server/host after editing."})
+    public static String specialTabName = "";
     @Config.RequiresMcRestart
     @Config.Comment("Allow trade-only remote access from the machine directory. Does not grant owner access.")
     public static boolean remoteTrading = true;
@@ -24,6 +30,7 @@ public final class RemoteSettings {
     @Config.RangeInt(min = 30, max = 120) @Config.RequiresMcRestart
     public static int absoluteSeconds = 120;
     private RemoteSettings() {}
+    public static String specialTabLabel() { return DirectoryText.label(specialTabName).trim(); }
     public static int chunks() { return Math.max(1, Math.min(8, maxTargetChunks)); }
     public static int leasedChunks() { return Math.max(1, Math.min(64, maxLeasedChunks)); }
     // Forge 1.12 scans public static fields, including final constants, unless explicitly ignored.

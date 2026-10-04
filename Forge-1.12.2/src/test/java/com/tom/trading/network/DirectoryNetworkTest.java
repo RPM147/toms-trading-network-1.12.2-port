@@ -65,13 +65,14 @@ public class DirectoryNetworkTest {
         }
         String search = String.join("", Collections.nCopies(64, "\uD83D\uDED2"));
         DirectoryQuery q = new DirectoryQuery(UUID.randomUUID(), 1, 0, 0, base.worldId, base.revision, search);
-        DirectoryPage maximum = new DirectoryPage(q, base.result, base.worldId, base.revision, base.total, false, rows);
+        DirectoryPage maximum = new DirectoryPage(q, base.result, base.worldId, base.revision, base.total, false, rows, search);
         ByteBuf bytes = Unpooled.buffer();
         try {
             new DirectoryNetwork.Page(maximum).toBytes(bytes);
             assertTrue(bytes.readableBytes() <= DirectoryNetwork.MAX_PAGE_BYTES);
             DirectoryNetwork.Page decoded = new DirectoryNetwork.Page(); decoded.fromBytes(bytes.duplicate());
             assertTrue(decoded.valid); assertEquals(preview, decoded.page.rows.get(49).entry.preview);
+            assertEquals(search, decoded.page.specialTabName);
             bytes.writeByte(0); DirectoryNetwork.Page extra = new DirectoryNetwork.Page(); extra.fromBytes(bytes); assertFalse(extra.valid);
         } finally { bytes.release(); }
     }
@@ -110,7 +111,8 @@ public class DirectoryNetworkTest {
         try {
             new DirectoryNetwork.RequestPage(query("")).toBytes(bytes);
             PacketBuffer b = new PacketBuffer(bytes); b.writeByte(DirectoryPage.Result.OK.ordinal());
-            b.writeBoolean(true); b.writeUniqueId(UUID.randomUUID()); b.writeLong(1); b.writeVarInt(51); b.writeBoolean(false); b.writeVarInt(51);
+            b.writeBoolean(true); b.writeUniqueId(UUID.randomUUID()); b.writeLong(1); b.writeVarInt(51); b.writeBoolean(false);
+            b.writeString(""); b.writeVarInt(51);
             DirectoryNetwork.Page decoded = new DirectoryNetwork.Page(); decoded.fromBytes(bytes.duplicate()); assertFalse(decoded.valid);
             bytes.setByte(16 + 8 + 4 + 1, 2); // Optional expected-world flag in the query.
             DirectoryNetwork.Page invalidBool = new DirectoryNetwork.Page(); invalidBool.fromBytes(bytes); assertFalse(invalidBool.valid);
@@ -136,5 +138,40 @@ public class DirectoryNetworkTest {
         try { new DirectoryPage(query(""), DirectoryPage.Result.OK, first.worldId, 1, 2, false,
                 Arrays.asList(first.rows.get(0), first.rows.get(0))); fail(); }
         catch (IllegalArgumentException expected) { }
+    }
+
+    @Test public void serverTabNameRoundTripsForEveryResultIncludingBlankAndEmptyDirectory() {
+        for (DirectoryPage.Result result : DirectoryPage.Result.values()) {
+            for (String name : Arrays.asList("", "Server Shops", "Etkinlik Mağazaları — 100%", "工具商店")) {
+                DirectoryPage original = new DirectoryPage(query(""), result, UUID.randomUUID(), 1, 0, false,
+                        Collections.emptyList()).withSpecialTabName(name);
+                ByteBuf bytes = Unpooled.buffer();
+                try {
+                    new DirectoryNetwork.Page(original).toBytes(bytes);
+                    DirectoryNetwork.Page decoded = new DirectoryNetwork.Page(); decoded.fromBytes(bytes);
+                    assertTrue(decoded.valid); assertEquals(name, decoded.page.specialTabName);
+                    assertEquals(result, decoded.page.result);
+                } finally { bytes.release(); }
+            }
+        }
+    }
+
+    @Test public void invalidTabNamesFailClosedInDtoAndWire() {
+        for (String name : Arrays.asList("\nShop", "\u00a7kShop", "\u202EShop", "\uD800",
+                String.join("", Collections.nCopies(65, "a")), String.join("", Collections.nCopies(129, "a")))) {
+            try { page().withSpecialTabName(name); fail("Invalid tab name accepted"); }
+            catch (IllegalArgumentException expected) { }
+            // An unpaired surrogate cannot be represented as-is in UTF-8; the DTO must reject it.
+            if (name.equals("\uD800")) continue;
+            ByteBuf bytes = Unpooled.buffer();
+            try {
+                new DirectoryNetwork.RequestPage(query("")).toBytes(bytes);
+                PacketBuffer b = new PacketBuffer(bytes); b.writeByte(DirectoryPage.Result.OK.ordinal());
+                b.writeBoolean(true); b.writeUniqueId(UUID.randomUUID()); b.writeLong(1); b.writeVarInt(0);
+                b.writeBoolean(false); b.writeString(name); b.writeVarInt(0);
+                DirectoryNetwork.Page decoded = new DirectoryNetwork.Page(); decoded.fromBytes(bytes);
+                assertFalse(decoded.valid);
+            } finally { bytes.release(); }
+        }
     }
 }

@@ -49,7 +49,7 @@ public final class MachineDirectoryData extends WorldSavedData {
         requireSupported();
         if (!isUniqueIdentity(address, id)) throw new IllegalArgumentException("Machine identity is unverified or conflicting");
         if (specialMachines.contains(id)) return false;
-        if (specialMachines.size() >= MAX_SPECIAL) throw new IllegalStateException("Currency & Tax limit reached (256); remove stale UUIDs first");
+        if (specialMachines.size() >= MAX_SPECIAL) throw new IllegalStateException("Shared tab limit reached (256); remove stale UUIDs first");
         specialMachines.add(id); markDirty(); revision++; return true;
     }
     public boolean removeSpecial(UUID id) {
@@ -153,11 +153,11 @@ public final class MachineDirectoryData extends WorldSavedData {
                 if (!tag.hasKey("SpecialMachines", Constants.NBT.TAG_LIST)
                         || ((NBTTagList) tag.getTag("SpecialMachines")).tagCount() != special.tagCount()
                         || special.tagCount() > MAX_SPECIAL)
-                    throw new IllegalArgumentException("Invalid Currency & Tax membership");
+                    throw new IllegalArgumentException("Invalid shared tab membership");
                 for (int i = 0; i < special.tagCount(); i++) {
                     NBTTagCompound row = special.getCompoundTagAt(i);
                     if (!row.hasUniqueId("MachineUUID") || !specialMachines.add(row.getUniqueId("MachineUUID")))
-                        throw new IllegalArgumentException("Invalid or duplicate Currency & Tax UUID");
+                        throw new IllegalArgumentException("Invalid or duplicate shared tab UUID");
                 }
             }
             NBTTagList list = tag.getTagList("Entries", Constants.NBT.TAG_COMPOUND);
