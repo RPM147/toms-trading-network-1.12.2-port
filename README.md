@@ -93,6 +93,27 @@ BETA-named JAR) and Electroblob's Wizardry **4.3.19**. Unsupported or unverifiab
 protection cannot silently authorize remote access. Other versions and arbitrary
 claim mods are not universally certified. See [architecture](docs/ARCHITECTURE.md).
 
+## Administrator commands
+
+These commands require **permission level 2**. Normal players use **G** (rebindable)
+to browse shops; they do not need administrator commands to trade.
+
+| Command | Purpose |
+|---|---|
+| `/ttndirectory special add <dimension> <x> <y> <z>` | Add a loaded machine to the shared Currency & Tax tab. |
+| `/ttndirectory special list [page]` | List selected machine UUIDs; page is optional. |
+| `/ttndirectory special remove <machine-uuid>` | Remove tab membership, not the machine or its items. |
+| `/ttndirectory status` | Show directory state and identity conflict count. |
+
+Replace placeholders with actual values. Dimension `0` is the Overworld. Adding
+requires the target chunk to be loaded and the machine identity to be unique;
+the command does not load chunks. For removal, use the **machine UUID** from
+`special list`, not a player's UUID. Refresh or reopen the directory after changes.
+
+Advanced maintenance commands (`export`, `import`, `reindex`, `renew`) are documented
+in the [backfill guide](docs/BACKFILL.md). Read its backup and identity warnings
+before using them; `reindex` is not a scan of all unloaded chunks.
+
 ## Documentation
 
 - [Player and administrator guide](docs/USAGE.md)
