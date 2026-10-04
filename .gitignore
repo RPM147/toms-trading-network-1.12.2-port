@@ -34,6 +34,7 @@ replay_pid*
 Thumbs.db
 
 # Secrets and local overrides; public gradle.properties remains tracked
+PUBLISHING-tr.md
 .env
 .env.*
 *.env

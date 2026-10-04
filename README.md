@@ -100,7 +100,6 @@ claim mods are not universally certified. See [architecture](docs/ARCHITECTURE.m
 - [Offline discovery of existing machines](docs/BACKFILL.md)
 - [Architecture and safety boundaries](docs/ARCHITECTURE.md)
 - [Changelog](CHANGELOG.md) / [validation scope](docs/VALIDATION.md)
-- [Publication checklist (Turkish)](docs/PUBLISHING-tr.md)
 
 ## Attribution, license and development disclosure
 
