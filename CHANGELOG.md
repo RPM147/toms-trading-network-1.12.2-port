@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased — publication preparation
+## 0.3.4-port.13 — Beta
+
+- Updated the displayed mod name, canonical repository URL and port maintainer credits.
+- Preserved tom5454's original attribution and MIT license; disclosed AI-assisted port work.
+- Bumped both embedded and Gradle versions; port.12 binaries remain unchanged.
+- No gameplay or network/data schema changes. Exact-version handshake still requires
+  port.13 on both host/server and every client; port.12 and port.13 cannot be mixed.
+
+### Source-repository preparation
 
 - Created a port-only source repository based on `0.3.4-port.12`.
 - Replaced internal project notes with public usage, build, architecture and publishing guides.

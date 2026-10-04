@@ -9,7 +9,7 @@ public class BuildInfoTest {
     @Test
     public void identityIsStable() {
         assertEquals("toms_trading_network", BuildInfo.MOD_ID);
-        assertEquals("Tom's Trading Network", BuildInfo.NAME);
+        assertEquals("Tom's Trading Network - Unofficial 1.12.2 Port", BuildInfo.NAME);
     }
 
     @Test

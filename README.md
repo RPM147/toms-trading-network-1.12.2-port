@@ -9,9 +9,11 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Source baseline: **0.3.4-port.12**. Prepared for an initial public beta; no public
-release or hosting-platform approval is implied by this repository. The maintainer
-reports that the current version works in their own play sessions. Automated and
+Current package version: **0.3.4-port.13 (Beta)**, based on port.12 gameplay.
+Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.13),
+not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
+reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
+user-reported experience, not a runtime test of the new package. Automated and
 manual verification have different scopes; see [validation](docs/VALIDATION.md).
 
 ## Features

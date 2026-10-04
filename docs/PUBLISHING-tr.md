@@ -29,9 +29,8 @@ Derleme çalıştırılırsa oluşan `build` ve `.gradle` klasörleri Git taraf�
 2. Profilde commit e-postası gizliliğini kontrol et; istersen GitHub no-reply adresini
    yerel Git kimliğinde kullan. Başkasının kimliğini veya tokenını kopyalama.
 3. Kamuya açık bakım sorumlusu bilgisini CREDITS/README'ye ekle.
-4. `mcmod.info` halen port.12'nin **orijinal proje URL'sini** içerir; bu kaynak
-   dosya davranış/sürüm bütünlüğünü korumak için değiştirilmedi. Yeni port repo URL'si
-   belli olduğunda metadata URL/isim/credits alanlarını güncelle, upstream atfını koru.
+4. Port.13 ile `mcmod.info` proje URL/isim/credits alanları yeni port deposuna göre
+   güncellendi; upstream atfı korundu. Eski port.12 paketi değiştirilmedi.
 5. Metadata/JAR içeriği değişirse **yeni sürüm numarası** kullan; farklı bir JAR'ı
    tekrar port.12 diye yayınlama. `build.gradle` ve `BuildInfo.VERSION` birlikte değişmeli.
 6. Gerçek ekran görüntüsü ve kullanım hakkı açık, sana ait ikon hazırla.
