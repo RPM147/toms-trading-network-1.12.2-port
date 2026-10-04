@@ -1,0 +1,12 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": ["iCi", "pep", "ici"],
+  "key": {
+    "i": {"type": "forge:ore_dict", "ore": "ingotIron"},
+    "e": {"type": "forge:ore_dict", "ore": "gemEmerald"},
+    "c": {"type": "forge:ore_dict", "ore": "chestWood"},
+    "C": {"item": "minecraft:comparator"},
+    "p": {"item": "minecraft:paper"}
+  },
+  "result": {"item": "toms_trading_network:vending_machine", "count": 1}
+}

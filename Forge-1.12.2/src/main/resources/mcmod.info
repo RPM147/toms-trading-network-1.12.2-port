@@ -1,0 +1,18 @@
+[
+  {
+    "modid": "toms_trading_network",
+    "name": "Tom's Trading Network",
+    "description": "Native Forge 1.12.2 port with owner-managed vending machines, secure item trading, Ore Dictionary filters and configurable inventory automation.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "https://github.com/tom5454/Toms-Trading-Network",
+    "authorList": [
+      "tom5454",
+      "Forge 1.12.2 port contributors"
+    ],
+    "credits": "Original project by tom5454.",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

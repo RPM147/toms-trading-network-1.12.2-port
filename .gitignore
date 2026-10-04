@@ -1,0 +1,52 @@
+# Build output, caches and local optional API inputs
+**/.gradle/
+**/build/
+**/out/
+**/bin/
+**/deps/
+
+# Development runtime, worlds, logs and local evidence
+**/run/
+**/run-client/
+**/run-server/
+**/validation-runs/
+**/logs/
+**/crash-reports/
+**/saves/
+**/mods/
+*.log
+hs_err_pid*
+replay_pid*
+*.hprof
+
+# IDE / OS / Python state
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+**/.classpath
+**/.project
+**/.settings/
+**/__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
+
+# Secrets and local overrides; public gradle.properties remains tracked
+.env
+.env.*
+*.env
+!.env.example
+local.properties
+gradle-local.properties
+*.pem
+*.key
+*.p12
+*.jks
+
+# Distributions belong in Releases, not source control.
+*.jar
+!Forge-1.12.2/gradle/wrapper/gradle-wrapper.jar
+*.zip
+*.7z

@@ -1,0 +1,484 @@
+import org.gradle.api.tasks.bundling.AbstractArchiveTask
+import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.JavaExec
+
+import java.security.MessageDigest
+import java.net.URLClassLoader
+import java.util.jar.JarFile
+
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:4.0.19'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+version = '0.3.4-port.12'
+group = 'com.tom.trading'
+archivesBaseName = 'toms_trading_network-1.12.2'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+tasks.register('verifyBuildJvm') {
+    group = 'verification'
+    description = 'Rejects builds that are not running under a Java 8 JDK.'
+
+    doLast {
+        if (JavaVersion.current() != JavaVersion.VERSION_1_8) {
+            throw new GradleException(
+                    "Forge 1.12.2 must build under Java 8; current JVM is ${System.getProperty('java.version')}."
+            )
+        }
+
+        String configuredJavaHome = System.getenv('JAVA_HOME')
+        File compiler = configuredJavaHome == null
+                ? null
+                : new File(configuredJavaHome, System.getProperty('os.name').toLowerCase(java.util.Locale.ROOT).contains('windows') ? 'bin/javac.exe' : 'bin/javac')
+        if (compiler == null || !compiler.isFile()) {
+            throw new GradleException(
+                    "JAVA_HOME must point to a JDK with javac; current JAVA_HOME is ${configuredJavaHome}."
+            )
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    dependsOn tasks.named('verifyBuildJvm')
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+minecraft {
+    mappings channel: 'stable', version: '39-1.12'
+
+    runs {
+        client {
+            workingDirectory project.file('run-client')
+            property 'forge.logging.console.level', 'info'
+            jvmArgs '-Xms256m', '-Xmx1G'
+        }
+
+        server {
+            workingDirectory project.file('run-server')
+            property 'forge.logging.console.level', 'info'
+            jvmArgs '-Xms256m', '-Xmx1G'
+            args '--nogui', '--port', '0', '--world', 'phase2-dev-smoke'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://maven.blamejared.com'
+        content { includeGroup 'mezz.jei' }
+    }
+    maven {
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+configurations {
+    legacyForgeSources {
+        transitive = false
+    }
+}
+
+configurations.configureEach {
+    // The generated Forge 1.12 mapped POM requests legacydev:0.2.3.+.
+    // Resolve that historical launcher deterministically instead of accepting
+    // future dynamic-version drift.
+    resolutionStrategy.force 'net.minecraftforge:legacydev:0.2.3.1'
+}
+
+// Source-reviewed optional policy APIs. Read-only local inputs, never runtime dependencies.
+// Override with -PremoteApiModsDir=<folder> on another development machine.
+def remoteApiModsDir = file(findProperty('remoteApiModsDir') ?: 'deps/remote-api')
+def remoteApiJars = [
+        'minecolonies-1.12.2-0.11.841-BETA-universal.jar': 'bd90043864e31edb6963da62ba46f7aa175c35565a6400599f379594c4a472d0',
+        'ElectroblobsWizardry-4.3.19.jar': '8a7f94dbccac622febff5111f3b3c2ba439e1d2b2c743f2a5c31fdfcd92d241c'
+]
+tasks.register('verifyRemotePolicyApis') {
+    inputs.files(remoteApiJars.keySet().collect { new File(remoteApiModsDir, it) })
+    doLast {
+        remoteApiJars.each { name, expected ->
+            File input = new File(remoteApiModsDir, name)
+            if (!input.isFile()) throw new GradleException("Missing compile-only policy API: ${input}. Set -PremoteApiModsDir.")
+            MessageDigest digest = MessageDigest.getInstance('SHA-256')
+            input.withInputStream { stream ->
+                byte[] buffer = new byte[8192]
+                for (int read = stream.read(buffer); read != -1; read = stream.read(buffer)) digest.update(buffer, 0, read)
+            }
+            String actual = digest.digest().collect { String.format('%02x', it & 0xff) }.join()
+            if (actual != expected) throw new GradleException("Unreviewed policy API JAR: ${name}")
+        }
+    }
+}
+compileJava.dependsOn tasks.named('verifyRemotePolicyApis')
+
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2859'
+    legacyForgeSources 'net.minecraftforge:forge:1.12.2-14.23.5.2859_mapped_stable_39-1.12:sources'
+    testImplementation 'junit:junit:4.13.2'
+    // API use only. Neither optional mod is on the runtime or packaged classpath.
+    compileOnly('mezz.jei:jei_1.12.2:4.16.5.1030:api') { transitive = false }
+    compileOnly('curse.maven:the-one-probe-245211:2667280') { transitive = false }
+    compileOnly files(remoteApiJars.keySet().collect { new File(remoteApiModsDir, it) })
+}
+
+tasks.register('prepareLegacyForgeRuntime') {
+    group = 'verification'
+    description = 'Generates the mapped recomp JAR required by ForgeGradle 4 legacy run tasks.'
+    dependsOn tasks.named('verifyBuildJvm')
+
+    inputs.files(configurations.legacyForgeSources)
+    doLast {
+        File sourceArtifact = configurations.legacyForgeSources.singleFile
+        logger.lifecycle("Verified mapped Forge sources: ${sourceArtifact.name}")
+    }
+}
+
+def legacyRunModRoot = layout.buildDirectory.dir('legacy-run-mod')
+
+tasks.register('stageLegacyRunMod', Sync) {
+    group = 'verification'
+    description = 'Creates an isolated combined classes/resources root for Forge 1.12 directory-mod discovery.'
+    dependsOn tasks.named('classes')
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    from(sourceSets.main.output)
+    into(legacyRunModRoot)
+}
+
+tasks.configureEach {
+    if (name == 'prepareRunClient' || name == 'prepareRunServer') {
+        dependsOn tasks.named('prepareLegacyForgeRuntime'), tasks.named('stageLegacyRunMod')
+    }
+}
+
+tasks.withType(JavaExec).configureEach { JavaExec runTask ->
+    if (runTask.name == 'runClient' || runTask.name == 'runServer') {
+        doFirst {
+            Set<File> normalOutputRoots = sourceSets.main.output.classesDirs.files.collect {
+                it.canonicalFile
+            } as Set
+            if (sourceSets.main.output.resourcesDir != null) {
+                normalOutputRoots.add(sourceSets.main.output.resourcesDir.canonicalFile)
+            }
+            File stagedModRoot = legacyRunModRoot.get().asFile.canonicalFile
+            FileCollection dependencyClasspath = runTask.classpath.filter { File candidate ->
+                !normalOutputRoots.contains(candidate.canonicalFile)
+            }
+            runTask.setClasspath(project.files(stagedModRoot).plus(dependencyClasspath))
+            if (runTask.classpath.files.iterator().next().canonicalFile != stagedModRoot) {
+                throw new GradleException('Combined legacy mod root is not first on the run classpath.')
+            }
+
+            List<File> mappedForgeArtifacts = runTask.classpath.files.findAll { File candidate ->
+                candidate.name.startsWith('forge-1.12.2-14.23.5.2859_mapped_stable_39-1.12')
+            }.toList()
+            if (mappedForgeArtifacts.size() != 1 || !mappedForgeArtifacts[0].name.endsWith('-recomp.jar')) {
+                throw new GradleException(
+                        "Legacy run must select exactly one mapped Forge recomp JAR; found ${mappedForgeArtifacts}."
+                )
+            }
+
+            JarFile mappedForge = new JarFile(mappedForgeArtifacts[0])
+            try {
+                def sideEntry = mappedForge.getJarEntry('net/minecraftforge/fml/relauncher/Side.class')
+                if (sideEntry == null) {
+                    throw new GradleException('Mapped Forge recomp JAR is missing Side.class.')
+                }
+                byte[] sideBytes = mappedForge.getInputStream(sideEntry).withCloseable { it.bytes }
+                if (new String(sideBytes, 'ISO-8859-1').contains('BUKKIT')) {
+                    throw new GradleException('Invalid BUKKIT side leaked into the mapped Forge runtime.')
+                }
+            } finally {
+                mappedForge.close()
+            }
+            logger.lifecycle("Verified legacy run artifact: ${mappedForgeArtifacts[0].name}")
+        }
+
+        if (runTask.name == 'runServer') {
+            standardInput = System.in
+        }
+    }
+}
+
+test {
+    useJUnit()
+    systemProperty 'tomsTradingNetworkVersion', project.version.toString()
+    // Fresh ForgeGradle 4 caches can expose the invalid raw mapped Side.BUKKIT
+    // artifact. Tests need the same corrected recomp runtime as development runs.
+    def testDependencies = classpath.filter { File candidate ->
+        !candidate.name.startsWith('forge-1.12.2-14.23.5.2859_mapped_stable_39-1.12')
+    }
+    def correctedForge = project.files({
+        File sources = configurations.legacyForgeSources.singleFile
+        File recomp = new File(sources.parentFile, sources.name.replace('-sources.jar', '-recomp.jar'))
+        if (!recomp.isFile()) throw new GradleException("Missing test Forge recomp runtime: ${recomp}")
+        return recomp
+    })
+    // MergeTool also includes a historical Side class: corrected Forge must win lookup order.
+    classpath = correctedForge.plus(testDependencies)
+    doFirst {
+        JarFile forge = new JarFile(correctedForge.singleFile)
+        try {
+            def side = forge.getJarEntry('net/minecraftforge/fml/relauncher/Side.class')
+            if (side == null) throw new GradleException('Test Forge runtime is missing Side.class.')
+            byte[] bytes = forge.getInputStream(side).withCloseable { it.bytes }
+            if (new String(bytes, 'ISO-8859-1').contains('BUKKIT')) {
+                throw new GradleException('Invalid BUKKIT side leaked into the test Forge runtime.')
+            }
+        } finally { forge.close() }
+        logger.lifecycle("Verified test Forge runtime: ${correctedForge.singleFile.name}")
+    }
+}
+
+jar {
+    destinationDirectory.set(layout.buildDirectory.dir('intermediates/reobf'))
+
+    manifest {
+        attributes(
+                'Specification-Title': 'toms_trading_network',
+                'Specification-Vendor': 'tom5454 and Forge 1.12.2 port contributors',
+                'Specification-Version': '1',
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor': 'tom5454 and Forge 1.12.2 port contributors'
+        )
+    }
+
+    from('LICENSE') {
+        into 'META-INF'
+        rename { 'LICENSE_toms_trading_network.txt' }
+    }
+}
+
+jar.finalizedBy('reobfJar')
+
+tasks.register('releaseJar', Zip) {
+    group = 'build'
+    description = 'Repackages the reobfuscated JAR with deterministic entry order and timestamps.'
+    dependsOn tasks.named('reobfJar')
+
+    archiveFileName.set("${archivesBaseName}-${project.version}.jar")
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+    duplicatesStrategy = DuplicatesStrategy.FAIL
+    from({ zipTree(tasks.named('jar').get().archiveFile.get().asFile) })
+}
+
+tasks.named('assemble') {
+    dependsOn tasks.named('releaseJar')
+}
+
+tasks.register('verifyReleaseArtifact') {
+    group = 'verification'
+    description = 'Verifies Java 8 bytecode and dependency-clean release JAR contents.'
+    dependsOn tasks.named('releaseJar')
+
+    File checksumReport = file("$buildDir/reports/verification/release-artifact.sha256")
+    inputs.file(tasks.named('releaseJar').flatMap { it.archiveFile })
+    outputs.file(checksumReport)
+
+    doLast {
+        File releaseJar = tasks.named('releaseJar').get().archiveFile.get().asFile
+        if (!releaseJar.isFile()) {
+            throw new GradleException("Release JAR was not created: ${releaseJar}")
+        }
+
+        String expectedName = "${archivesBaseName}-${project.version}.jar"
+        if (releaseJar.name != expectedName) {
+            throw new GradleException("Expected release filename ${expectedName} but found ${releaseJar.name}.")
+        }
+
+        Set<String> requiredEntries = [
+                'META-INF/MANIFEST.MF',
+                'META-INF/LICENSE_toms_trading_network.txt',
+                'mcmod.info',
+                'pack.mcmeta',
+                'assets/toms_trading_network/lang/en_us.lang',
+                'com/tom/trading/BuildInfo.class',
+                'com/tom/trading/TradingNetworkMod.class',
+                'com/tom/trading/Content.class',
+                'com/tom/trading/block/BlockVendingMachine.class',
+                'com/tom/trading/tile/TileVendingMachine.class',
+                'com/tom/trading/event/CommonEvents.class',
+                'com/tom/trading/client/ClientRegistration.class',
+                'com/tom/trading/client/GuiMachine.class',
+                'com/tom/trading/container/MachineGuiHandler.class',
+                'com/tom/trading/container/ContainerMachineConfig.class',
+                'com/tom/trading/container/ContainerMachineTrading.class',
+                'com/tom/trading/network/MachineNetwork.class',
+                'com/tom/trading/trade/TradeExecutor.class',
+                'com/tom/trading/directory/MachineDirectoryData.class',
+                'com/tom/trading/directory/DirectoryPager.class',
+                'com/tom/trading/directory/DirectoryTab.class',
+                'com/tom/trading/directory/OfferPreview.class',
+                'com/tom/trading/directory/OfferPreviewCodec.class',
+                'com/tom/trading/directory/OfferPreviewCapture.class',
+                'com/tom/trading/client/DirectoryPreviewLayout.class',
+                'com/tom/trading/directory/DirectoryCommand.class',
+                'com/tom/trading/directory/DirectoryImport.class',
+                'com/tom/trading/network/DirectoryNetwork.class',
+                'com/tom/trading/network/RemoteNetwork.class',
+                'com/tom/trading/client/GuiMachineDirectory.class',
+                'com/tom/trading/client/GuiRemoteTrading.class',
+                'com/tom/trading/container/ContainerRemoteTrading.class',
+                'com/tom/trading/remote/RemoteTrading.class',
+                'com/tom/trading/remote/RemoteSession.class',
+                'com/tom/trading/remote/ChunkLeaseManager.class',
+                'com/tom/trading/remote/SharedLeasePool.class',
+                'com/tom/trading/remote/ChunkLoadBudget.class',
+                'com/tom/trading/remote/ProtectionCoverage$Bounds.class',
+                'com/tom/trading/remote/RemoteAccess.class',
+                'com/tom/trading/remote/RemoteSettings.class',
+                'com/tom/trading/trade/TradeRequestLedger.class',
+                'com/tom/trading/trade/TradeCompletion.class',
+                'com/tom/trading/trade/TradeReceipt.class',
+                'com/tom/trading/trade/TradeReceiptChat.class',
+                'com/tom/trading/automation/MachineSide.class',
+                'com/tom/trading/automation/SidedMachineHandler.class',
+                'com/tom/trading/automation/AutomationTransfer.class',
+                'com/tom/trading/compat/StackLimits.class',
+                'com/tom/trading/item/OreFilters.class',
+                'com/tom/trading/item/TagFilterItem.class',
+                'com/tom/trading/item/ItemVendingMachine.class',
+                'com/tom/trading/compat/jei/TradingJeiPlugin.class',
+                'com/tom/trading/compat/top/TradingProbeProvider.class',
+                'assets/toms_trading_network/models/item/tag_filter.json',
+                'assets/toms_trading_network/recipes/vending_machine.json',
+                'assets/toms_trading_network/lang/es_mx.lang',
+                'assets/toms_trading_network/lang/tr_tr.lang',
+                'assets/toms_trading_network/blockstates/vending_machine.json',
+                'assets/toms_trading_network/models/block/vending_machine.json',
+                'assets/toms_trading_network/models/item/vending_machine.json',
+                'assets/toms_trading_network/textures/blocks/vending_machine_front.png',
+                'assets/toms_trading_network/textures/blocks/vending_machine_side.png',
+                'assets/toms_trading_network/textures/gui/vending_machine_config.png',
+                'assets/toms_trading_network/textures/gui/vending_machine_trading.png',
+                'com/tom/trading/proxy/CommonProxy.class',
+                'com/tom/trading/proxy/ClientProxy.class'
+        ] as Set
+        List<String> forbiddenPrefixes = [
+                'net/minecraft/',
+                'net/minecraftforge/',
+                'mezz/jei/',
+                'mcjty/theoneprobe/',
+                'pl/asie/stackup/',
+                'com/minecolonies/',
+                'electroblob/wizardry/'
+        ]
+
+        JarFile jarFile = new JarFile(releaseJar)
+        try {
+            Set<String> entryNames = jarFile.entries().collect { it.name } as Set
+            Set<String> missingEntries = requiredEntries - entryNames
+            if (!missingEntries.isEmpty()) {
+                throw new GradleException("Release JAR is missing required entries: ${missingEntries.sort()}")
+            }
+
+            String metadata = jarFile.getInputStream(jarFile.getJarEntry('mcmod.info')).withCloseable {
+                new String(it.bytes, 'UTF-8')
+            }
+            if (!metadata.contains("\"version\": \"${project.version}\"")) {
+                throw new GradleException('mcmod.info does not contain the expanded project version.')
+            }
+            if (metadata.contains('updateUrl')) {
+                throw new GradleException('The Forge 1.12.2 metadata must not declare an update URL.')
+            }
+            if (metadata.contains('Gameplay content is intentionally absent') || metadata.contains('Phase 2')) {
+                throw new GradleException('Release metadata still describes the obsolete scaffold.')
+            }
+
+            List<String> forbiddenEntries = entryNames.findAll { String entryName ->
+                forbiddenPrefixes.any { String prefix -> entryName.startsWith(prefix) }
+            }.sort()
+            if (!forbiddenEntries.isEmpty()) {
+                throw new GradleException("Release JAR bundles forbidden dependency classes: ${forbiddenEntries}")
+            }
+
+            List<String> unexpectedClasses = entryNames.findAll { String entryName ->
+                entryName.endsWith('.class') && !entryName.startsWith('com/tom/trading/')
+            }.sort()
+            if (!unexpectedClasses.isEmpty()) {
+                throw new GradleException("Release JAR contains classes outside the port namespace: ${unexpectedClasses}")
+            }
+
+            entryNames.findAll { it.endsWith('.class') }.each { String entryName ->
+                jarFile.getInputStream(jarFile.getJarEntry(entryName)).withCloseable { input ->
+                    DataInputStream classData = new DataInputStream(input)
+                    if (classData.readInt() != 0xCAFEBABE as int) {
+                        throw new GradleException("Invalid class header in ${entryName}")
+                    }
+                    classData.readUnsignedShort()
+                    int majorVersion = classData.readUnsignedShort()
+                    if (majorVersion != 52) {
+                        throw new GradleException(
+                                "Expected Java major version 52 but ${entryName} reports ${majorVersion}."
+                        )
+                    }
+                }
+            }
+
+            ['FMLCorePlugin', 'FMLCorePluginContainsFMLMod', 'MixinConfigs'].each { String attribute ->
+                if (jarFile.manifest.mainAttributes.getValue(attribute) != null) {
+                    throw new GradleException("Release JAR must not declare manifest attribute ${attribute}.")
+                }
+            }
+        } finally {
+            jarFile.close()
+        }
+
+        URLClassLoader artifactClassLoader = new URLClassLoader(
+                [releaseJar.toURI().toURL()] as URL[],
+                (ClassLoader) null
+        )
+        try {
+            Class<?> buildInfo = artifactClassLoader.loadClass('com.tom.trading.BuildInfo')
+            String embeddedVersion = (String) buildInfo.getField('VERSION').get(null)
+            if (embeddedVersion != project.version.toString()) {
+                throw new GradleException(
+                        "BuildInfo.VERSION ${embeddedVersion} does not match project version ${project.version}."
+                )
+            }
+        } finally {
+            artifactClassLoader.close()
+        }
+
+        MessageDigest digest = MessageDigest.getInstance('SHA-256')
+        releaseJar.withInputStream { input ->
+            byte[] buffer = new byte[8192]
+            for (int read = input.read(buffer); read != -1; read = input.read(buffer)) {
+                digest.update(buffer, 0, read)
+            }
+        }
+        String checksum = digest.digest().collect { String.format('%02x', it & 0xff) }.join()
+        checksumReport.parentFile.mkdirs()
+        checksumReport.setText("${checksum}  ${releaseJar.name}${System.lineSeparator()}", 'UTF-8')
+        logger.lifecycle("Verified release artifact: ${releaseJar.name} (SHA-256 ${checksum})")
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyReleaseArtifact')
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'mcversion', '1.12.2'
+
+    filesMatching('mcmod.info') {
+        expand version: project.version, mcversion: '1.12.2'
+    }
+}
