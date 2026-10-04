@@ -1,5 +1,28 @@
 # Validation scope and source preparation
 
+## Port.15 simplified directory rows — 2026-10-04
+
+- Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`
+  passed on Windows with existing dependency caches and process-local 512 MiB heaps.
+- **40 focused JUnit tests in seven classes passed**, with no failures, errors or
+  skips: BuildInfoTest (3), DirectoryClientStateTest (8), DirectoryPreviewLayoutTest
+  (1), DirectoryReturnTest (6), DirectoryItemSearchTest (3), SharedEconomyTabTest
+  (9), DirectoryNetworkTest (10).
+- Coverage checks existing preview geometry, four-digit quantities, narrow-width
+  multi-item layouts, directory state/return navigation, item-name search, shared
+  membership, packet bounds and exact-version peer matching. These tests do not
+  render the GUI; no in-game visual or multiplayer test was run for port.15.
+- Source review confirms that row drawing now emits only machine/owner labels
+  on the left. Right-hand previews, hover/F1 details and access checks are retained.
+- Per-entry SHA-256 comparison against port.14 found differences only in
+  `GuiMachineDirectory.class`, `GuiMachineDirectory$Entries.class`,
+  `BuildInfo.class`, `TradingNetworkMod.class` (inlined version), `mcmod.info`
+  and `META-INF/MANIFEST.MF`. No entries were added/removed; all other entries,
+  including trading, network and persistence classes, matched byte-for-byte.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.15.jar`, **344317 bytes**.
+- SHA-256: `9e573b943f573621321a84e77c1f1b1272d38cb11a7187cd3af8062b9241d64c`.
+- Live instance files were not changed. Release notes: [port.15](RELEASE-port.15.md).
+
 ## Port.14 configurable shared tab — 2026-10-04
 
 - Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`

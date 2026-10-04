@@ -17,7 +17,10 @@ Press **G**, or rebind the directory action in Controls. The list contains known
 machine metadata; it is not guaranteed to include every historical unloaded machine.
 Visit an older machine to let it register, or use the [offline backfill](BACKFILL.md).
 
-Rows emphasize what you receive and pay, with owner/machine details underneath.
+Rows show only the machine name and owner on the left, with payment/output icons
+and quantities on the right. Receive/Pay text and routine status lines are not
+repeated in the row. Hover details and F1 retain full offer/status information;
+actual access failures still appear when opening a trade.
 Hover over icons for quantities and matching constraints. Some custom-NBT items
 use generic icons. Cached offers and stock can differ from the live target.
 Click a row, or select it with the keyboard and press Enter, to open the current
@@ -75,7 +78,7 @@ S:specialTabName=Server Shops
 Launch the mod once to generate its config if needed, stop the server/host, edit
 the existing setting, and start again. For singleplayer or Open to LAN, edit the
 hosting instance's config. Connected players receive the server's name; a remote
-client's local config cannot replace it. Use the same port.14 JAR on every peer.
+client's local config cannot replace it. Use the same exact mod version on every peer.
 
 An empty value keeps the translated Currency & Tax default. Custom names are
 sent literally (not translated), trimmed, and limited to 64 Unicode characters.

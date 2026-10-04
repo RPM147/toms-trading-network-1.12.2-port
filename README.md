@@ -11,8 +11,8 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current package version: **0.3.4-port.14**, adding a server-configurable shared tab name.
-Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.14),
+Current package version: **0.3.4-port.15**, with simplified directory rows.
+Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.15),
 not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
 user-reported experience, not a runtime test of the new package. Automated and
@@ -25,6 +25,8 @@ manual verification have different scopes; see [validation](docs/VALIDATION.md).
 - Sided automation, Ore Dictionary payment filters and optional JEI / The One Probe integration.
 - Rebindable **G** key opens a server-wide directory of known machines and owners.
 - Product/payment previews and search by recorded item, machine or owner name.
+- Clean directory rows: machine name and owner on the left, trade icons and
+  quantities on the right. Full offer/status text remains in hover details and F1.
 - Remote trade-only access with bounded temporary chunk loading and live target checks.
 - Optional public chat receipts for successful trades.
 - A server-managed shared tab for selected machine UUIDs, with a configurable name
@@ -42,6 +44,8 @@ Actual gameplay screenshots supplied by the maintainer. Some player names have
 been redacted for privacy. Modpack-specific items, including the pictured coins,
 come from other mods; this port does not add a currency item system.
 The AI-generated project icon above is branding artwork, not an in-game render.
+Screenshots show an earlier version; port.15 removes the repeated Receive/Pay
+and status lines from directory rows while retaining the right-hand trade previews.
 
 ### Vending machines in the world
 
@@ -115,8 +119,9 @@ and formatting characters are removed. Long names are shortened on the button;
 hover over it or press F1 to read the full name. Renaming does not change machine
 membership, ownership, creative mode, prices or permissions.
 
-**Update the server/host and all clients to port.14.** The directory packet now
-includes the label; older port versions cannot connect.
+**Use the same exact release on the server/host and all clients.** Port.14 added
+the directory label field; port.15 keeps that format but still requires matching
+mod versions on every peer.
 
 ## Administrator commands
 

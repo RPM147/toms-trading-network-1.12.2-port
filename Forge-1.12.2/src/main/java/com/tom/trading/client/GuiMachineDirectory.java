@@ -332,12 +332,6 @@ public final class GuiMachineDirectory extends GuiScreen {
         return tr(opening.waiting() ? "open_pending" : !openStatus.equals("open_hint") ? openStatus
                 : state.page() == null ? state.status() : "open_hint");
     }
-    private String itemSummary(List<OfferPreview.Item> items) {
-        if (items.isEmpty()) return tr("preview_none");
-        StringJoiner text = new StringJoiner(" + ");
-        for (OfferPreview.Item item : items) text.add(item.quantity + " x " + previewName(item));
-        return text.toString();
-    }
     private void appendOfferLines(List<String> lines, OfferPreview preview) {
         if (!preview.known) return;
         for (OfferPreview.Item item : preview.sale) lines.add(tr("product", item.quantity + " x " + previewName(item)));
@@ -465,11 +459,9 @@ public final class GuiMachineDirectory extends GuiScreen {
             DirectoryPage.Row row = renderedPage.rows.get(index); MachineDirectoryEntry e = row.entry;
             int space = getListWidth() - 10;
             int detailsWidth = Math.max(0, space - previewLayout.previewWidth - 6);
-            text(e.preview.known ? tr("product", itemSummary(e.preview.sale)) : tr("preview_unknown"), x + 3, y + 2, detailsWidth, 0xFFFFFF);
-            text(e.preview.known ? tr("price", itemSummary(e.preview.payment)) : tr("preview_unknown_hint"), x + 3, y + 14, detailsWidth, 0xE3C17D);
-            text(tr("owner", ownerName(e)), x + 3, y + 27, detailsWidth, 0xB0D9EE);
-            text(machineName(e), x + 3, y + 38, detailsWidth, 0xAAAAAA);
-            text(status(row), x + 3, y + 49, detailsWidth, 0xAAAAAA);
+            // Keep rows quiet; full offer/status text remains in hover details and F1.
+            text(machineName(e), x + 3, y + 18, detailsWidth, 0xFFFFFF);
+            text(tr("owner", ownerName(e)), x + 3, y + 32, detailsWidth, 0xB0D9EE);
             drawPreview(e.preview, x + 3 + space - previewLayout.previewWidth, y, mouseX, mouseY);
         }
     }

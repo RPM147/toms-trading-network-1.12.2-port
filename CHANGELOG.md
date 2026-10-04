@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.4-port.15
+
+- Simplified directory rows (G key) in both All machines and the shared tab:
+  only the machine name and owner remain on the left.
+- Removed duplicate Receive/Pay and Recorded/access-status lines from the rows.
+  Right-hand payment/output icons, quantities and the trade arrow are unchanged.
+- Full offer/status information remains in hover details and F1. Actual errors,
+  item-name search, navigation and server-side access checks are unchanged.
+- Kept row height and preview/hit-test geometry to accommodate multi-item trades
+  at narrow GUI widths. Removed the unused per-frame item-summary formatter.
+- No config, inventory, saved-data or network-format changes from port.14.
+  Exact-version matching still requires port.15 on the server/host and every client.
+
 ## 0.3.4-port.14
 
 - Added server-side `general.specialTabName` in `config/toms_trading_network.cfg`
