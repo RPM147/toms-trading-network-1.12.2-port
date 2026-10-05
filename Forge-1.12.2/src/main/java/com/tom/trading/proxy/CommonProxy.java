@@ -36,6 +36,9 @@ public class CommonProxy {
     public void receiveFeedback(MachineNetwork.Feedback feedback) {}
 
     public void receiveDirectoryPage(DirectoryPage page, INetHandler connection) {}
+    public void openTradeBook(net.minecraft.util.EnumHand hand) {}
+    public void clearTradeBooks() {}
+    public void receiveTradeBook(com.tom.trading.network.TradeBookNetwork.Opened message, INetHandler connection) {}
 
     public void receiveRemoteOpen(com.tom.trading.network.RemoteNetwork.Opened message, INetHandler connection) {}
     public void receiveRemoteState(com.tom.trading.network.RemoteNetwork.State message, INetHandler connection) {}

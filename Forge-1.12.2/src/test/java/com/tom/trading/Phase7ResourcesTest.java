@@ -54,7 +54,8 @@ public class Phase7ResourcesTest {
         for (String key : english.stringPropertyNames()) {
             if (!key.startsWith("gui.toms_trading_network.directory.") && !key.startsWith("key.")
                     && !key.startsWith("gui.toms_trading_network.remote.")
-                    && !key.startsWith("gui.toms_trading_network.totals.")) continue;
+                    && !key.startsWith("gui.toms_trading_network.totals.")
+                    && !key.startsWith("gui.toms_trading_network.book.")) continue;
             assertNotNull(key, turkish.getProperty(key));
             assertEquals(key, english.getProperty(key).split("%s", -1).length, turkish.getProperty(key).split("%s", -1).length);
         }

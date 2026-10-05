@@ -11,9 +11,11 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current package version: **0.3.4-port.16**, with transaction logs, purchase totals and personal favorites.
-Download the JAR from [GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.16),
-not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
+Current package version: **0.3.4-port.17**, adding machine-bound trade books
+to transaction logs, purchase totals and personal favorites. Regular release,
+not a pre-release:
+[port.17 on GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.17).
+Download the release JAR, not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
 user-reported experience, not a runtime test of the new package. Automated and
 manual verification have different scopes; see [validation](docs/VALIDATION.md).
@@ -30,6 +32,9 @@ manual verification have different scopes; see [validation](docs/VALIDATION.md).
 - Remote trade-only access with bounded temporary chunk loading and live target checks.
 - Optional public chat receipts for successful trades.
 - Rotating server transaction logs with actual paid/delivered quantities, independent of chat.
+- Opt-in machine ledgers: Shift-right-click your machine with a blank Book and
+  Quill, then right-click the bound book to read recent trades. Anyone holding
+  that book can read it; only the owner can create the binding.
 - Selected-batch purchase totals in local and remote trading, with an item-by-item breakdown.
 - Personal, world-specific favorites: use [+]/[*] in the directory or press F on a selected row.
 - A server-managed shared tab for selected machine UUIDs, with a configurable name
@@ -124,7 +129,7 @@ hover over it or press F1 to read the full name. Renaming does not change machin
 membership, ownership, creative mode, prices or permissions.
 
 **Use the same exact release on the server/host and all clients.** Port.16 adds
-favorite mutations and per-row favorite flags to directory packets; older versions cannot connect.
+favorite packets and port.17 adds book packets; different port versions cannot connect.
 
 ## Totals, favorites and transaction logs
 
@@ -141,6 +146,30 @@ The server records completed trades in
 Set `B:transactionLog=false` under `general` in the server config and restart to
 disable it. Logs contain player names/UUIDs and trade details; treat them as private
 administrator data. See [usage](docs/USAGE.md) for retention and crash limitations.
+
+## Machine-bound trade books (port.17)
+
+Hold one blank **Book and Quill** and **Shift-right-click a machine you own**.
+Binding starts server-side recording for that machine. Right-click the book in
+the air to refresh and read its history; the view is read-only. The tooltip
+identifies the machine, owner and binding address. Give the book only to people
+who should see those trades; possession grants read access, not machine control.
+
+Entries show localized buyer/seller labels on separate lines, with actual
+delivered/payment amounts (English example):
+
+```text
+Buyer: Furkan15
+Seller: Veras
+64 Iron Ingot <- 3 Copper Coin
+```
+
+Recording continues when the book is stored or lost. The owner can bind a new
+blank book to recover the retained history. Existing handwritten books are not
+overwritten, and bound books cannot be rebound. History starts at the first
+binding, with up to 100 recent entries per machine subject to shared/display
+limits; it does not import earlier transaction logs. See [usage](docs/USAGE.md)
+for retention, access and save details.
 
 ## Administrator commands
 

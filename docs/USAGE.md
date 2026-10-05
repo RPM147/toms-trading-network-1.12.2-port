@@ -115,6 +115,72 @@ tail record or world/log disagreement. Disk/serialization failures disable loggi
 for the current server session and report an error in the regular server log;
 trades and chat remain enabled. Fix disk/path problems and restart to resume logging.
 
+## Machine-bound trade books (port.17)
+
+1. Hold one blank **Book and Quill** in either hand.
+2. **Shift-right-click a Vending Machine you own.** A message confirms binding.
+3. Right-click the bound book in the air to refresh and read its history.
+
+The book uses a read-only view: no editing or signing controls. Normal unbound
+books keep their usual behavior. Books containing handwritten text are rejected
+without overwriting it; a bound book cannot be linked to a different machine.
+The tooltip shows the machine name, owner and original binding coordinates.
+Only the exact machine owner can bind a book; operator or creative status does
+not grant permission to bind someone else's machine.
+
+Anyone holding a bound book can read that machine's history, including another
+player you give it to. This is bearer access, not an owner-only view. Do not give
+the book to someone who should not see those trades. Book access does not expose
+stock/earnings, grant configuration rights or authorize remote purchases.
+
+### Entry format and recording
+
+```text
+Buyer: Furkan15
+Seller: Veras
+64 Iron Ingot <- 3 Copper Coin
+```
+
+Buyer and seller appear on separate labeled lines using the reader's game language
+(Turkish: `Alıcı: Furkan15`, `Satıcı: Veras`; Spanish: `Comprador`, `Vendedor`).
+Existing compact entries also display these labels without rewriting saved history.
+Each successful local or remote player purchase adds one compact record: buyer,
+seller, delivered items/counts, then paid items/counts. Multiple items are joined
+with ` + `. The amounts reflect the actual completed trade, including a partial
+batch, not the requested batch preview. Matching variants with the same item ID,
+metadata and display label are grouped. Item labels come from the server and long
+labels are shortened. No date, UUID, raw item NBT or other verbose details are
+included in these trade lines. Failed trades, hopper transfers and request replays
+do not create additional entries.
+
+Recording starts when the first book is bound to that machine. Earlier JSONL
+records are not imported. It continues server-side when the book is in a chest,
+not carried, or lost. The owner can bind another blank book to the same machine
+to recover the retained history; multiple bound books read the same ledger.
+Reading refreshes the book without loading the machine's chunk. A replacement
+machine at the same coordinates has a different UUID and does not inherit it.
+
+### Retention and saves
+
+The ledger retains **up to 100 recent entries per machine**, newest first when
+read. Shared limits are 8192 entries and 2 million text characters across the
+world, with up to 4096 registered machines. Shared limits can evict a machine's
+older entries earlier. Each read is limited to 24 KiB of text and 50 rendered
+pages, so unusually long/multi-item entries can reduce the visible history.
+Only this recent history is retained; a new book cannot restore evicted records.
+
+Book bindings and history use `<world>/data/ttn_trade_books.dat`, saved through
+Minecraft's normal world saves. Keep the complete world, including player/book
+items and this data, in backups. The file contains book access keys and buyer/
+seller information; do not publish it. Unsupported or corrupt data fails closed
+rather than silently replacing it. Sudden crashes can lose unsaved entries;
+the book is not a crash-atomic financial ledger.
+
+The separate JSONL transaction log and public announcements remain independent:
+disabling either does not disable bound-book recording. Archive JSONL files
+elsewhere before rotation if you need longer history. Install the same port.17
+JAR on the host/server and every client; no manual config change is required.
+
 ## Shared tab (Currency & Tax by default)
 
 All players see the same administrator-selected category. Members also appear in

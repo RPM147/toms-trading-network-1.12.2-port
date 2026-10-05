@@ -55,6 +55,7 @@ public final class MachineNetwork {
         register(SetGhostTemplate.class);
         nextId = DirectoryNetwork.register(CHANNEL, nextId);
         nextId = RemoteNetwork.register(CHANNEL, nextId);
+        nextId = TradeBookNetwork.register(CHANNEL, nextId);
     }
 
     private static <M extends Request> void register(Class<M> type) {

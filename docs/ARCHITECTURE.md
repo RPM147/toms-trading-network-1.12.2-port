@@ -84,6 +84,47 @@ Never weaken authorization or quotas to make an unavailable target appear usable
 - Directory/tile/preview schemas remain 2/3/1. Favorites introduce a separate,
   namespaced player-data record; backups should include the whole world/player data.
 
+## Port.17 bound trade books
+
+- Binding uses a native Shift-right-click on a supported machine, preserving
+  Forge interaction cancellations. The server checks the exact owner, active
+  player, same world, eight-block reach, one blank writable book and unique live
+  machine identity. Existing text or binding markers cannot be overwritten.
+- Save-owned `ttn_trade_books` format 1 records the directory WorldUUID, stable
+  MachineUUID and a server-issued random UUID read key. A replacement at the same
+  coordinates cannot inherit a binding. Multiple books for the same machine share
+  the retained ledger. No chunk/TileEntity references or per-player ticking are kept.
+- Possession of a valid bound book grants read access, not ownership or trading
+  authority. Requests contain only a nonce, player dimension and hand; the server
+  derives the world/machine/key from the real held item instead of accepting an
+  arbitrary target from the client. Book keys and world data must remain private.
+- Open requests share the existing ingress budget and permit at most one queued
+  task per player. Replies are bounded and correlated against connection, nonce,
+  dimension, hand, held binding and a 15-second deadline. Stale replies cannot open
+  a different book/world; disconnect clears client state and connection references.
+- The stored item remains a writable book. The client renders a display-only
+  written-book snapshot through vanilla's read-only book view, using plain text
+  components with no click actions. This is not a separate authoritative client log.
+- Buyer/seller captions are localized at display time on separate lines. Stored
+  compact records and receipt quantities are unchanged; no save/protocol migration
+  is needed, and existing entries gain captions when opened in the updated view.
+- Recording consumes the immutable committed receipt after request-ledger
+  publication, never client text. The book, JSONL and chat sinks are isolated;
+  replay/failure paths do not append extra successes and book storage errors do
+  not roll back/retry the already committed purchase. Amounts are actual paid/
+  delivered totals. Recording starts at first binding; no historical backfill.
+- Retention is bounded: 4096 machine registrations, 100 entries/machine, 8192
+  entries and 2 million UTF-16 text units globally, 8192 text units/entry. An
+  insertion-ordered record table plus per-machine deque index avoids scanning all
+  records on a purchase. Oldest records are evicted when a bound is exceeded.
+- Snapshots contain newest complete entries first, at most 24 KiB of UTF-8 data.
+  Client wrapping caps display at 50 pages of 14 lines; any single oversized row
+  is visibly shortened. Unsupported/corrupt book NBT is preserved and unavailable.
+  Book data uses normal world saves, with no per-trade fsync or crash-atomic link
+  to inventory persistence. Back up the entire world, not just the JAR.
+- Directory/tile/preview formats remain 2/3/1. New appended book message types
+  require port.17 on every peer under the existing exact-version handshake.
+
 ## Build invariants
 
 Java 8 bytecode, pinned Forge/Gradle/mappings, no bundled optional dependencies,

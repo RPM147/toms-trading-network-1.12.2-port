@@ -23,7 +23,16 @@ public final class TradeCompletion {
     }
 
     private static void publish(MinecraftServer server, TradeReceipt receipt) {
-        publish(receipt, actual -> TradeTransactionLog.record(server, actual), actual -> announce(server, actual));
+        publish(receipt, actual -> com.tom.trading.book.TradeBooks.record(server, actual),
+                actual -> TradeTransactionLog.record(server, actual), actual -> announce(server, actual));
+    }
+
+    static void publish(TradeReceipt receipt, Consumer<TradeReceipt> book, Consumer<TradeReceipt> audit, Consumer<TradeReceipt> chat) {
+        try { book.accept(receipt); }
+        catch (RuntimeException | LinkageError failure) {
+            LogManager.getLogger(BuildInfo.MOD_ID).error("Committed trade could not update its bound book history", failure);
+        }
+        publish(receipt, audit, chat);
     }
 
     /** A broken audit sink and a broken chat sink must never suppress each other or retry a purchase. */

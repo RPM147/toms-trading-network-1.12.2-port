@@ -1,5 +1,41 @@
 # Validation scope and source preparation
 
+## Port.17 machine-bound trade books — 2026-10-05
+
+- Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`
+  passed on Windows using existing caches and process-local 512 MiB heaps. Pinned
+  optional API JARs were read only; no game/server or live world was modified.
+- **64 focused JUnit tests in 10 classes passed**, with no failures, errors or
+  skips: TradeBookDataTest (7), TradeBookEntryTest (3), TradeBookClientTest (6),
+  TradeBookNetworkTest (3), BuildInfoTest (3), MachineNetworkTest (14),
+  Phase7ResourcesTest (5), MachineAccessTest (8), TradeRequestLedgerTest (7),
+  TradeTransactionLogTest (8). The full gameplay suite was not rerun.
+- New cases cover issued-key/world/machine isolation, save/read round trips,
+  retention/global capacity/UTF-8 bounds, corrupt-data preservation, blank-book
+  protection, compact actual quantities and variant grouping. Replay/failure and
+  a failing book sink leave the committed purchase and other sinks unchanged.
+- Protocol/client cases cover truncated/trailing/oversized payloads, bad flags,
+  stale nonce/world/dimension/hand/key replies, one-shot consumption, deadlines,
+  switching books and bounded newest-first page layout. Resource checks include
+  English, Turkish and Mexican Spanish book messages.
+- Added buyer/seller role captions on separate lines, localized by the reader's
+  language without rewriting saved entries. Tests cover all three label sets,
+  multiline layout and preservation of unknown/incomplete records. The earlier
+  draft's total of 70 tests was a counting error: that run contained 62 tests;
+  the final XML reports contain 64 after these two additional cases.
+- Exact target Forge/Minecraft sources were checked for writable-book handling,
+  interaction packet forwarding, book text layout and read-only vanilla rendering.
+  These are source/automated checks, not proof of actual in-game interactions.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.17.jar`, **399435 bytes**.
+- SHA-256: `b738eb676e555443adf9b9fd33e83cd3f5a7dbb4e55a401fa873d6a298686f2b`.
+- Pending manual acceptance: bind with either hand as owner; reject another owner
+  and handwritten/rebound books; read local/remote actual trades; transfer/lost-book
+  recovery; save/restart; GUI-scale wrapping and compatibility with the live pack.
+  No in-game multiplayer session or dedicated-server launch was performed here.
+- Port.17 is packaged for the regular GitHub release channel, not pre-release.
+  The live instance remains unchanged; CurseForge upload is a separate step.
+  [Release notes](RELEASE-port.17.md) describe usage and limits.
+
 ## Port.16 logs, totals and favorites — 2026-10-05
 
 - Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`

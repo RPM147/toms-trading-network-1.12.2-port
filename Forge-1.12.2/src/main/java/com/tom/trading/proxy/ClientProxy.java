@@ -19,6 +19,10 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 @SideOnly(Side.CLIENT)
 public final class ClientProxy extends CommonProxy {
+    private final com.tom.trading.client.TradeBookClient books = new com.tom.trading.client.TradeBookClient();
+    @Override public void openTradeBook(net.minecraft.util.EnumHand hand) { books.open(hand); }
+    @Override public void receiveTradeBook(com.tom.trading.network.TradeBookNetwork.Opened message, INetHandler connection) { books.receive(message, connection); }
+    @Override public void clearTradeBooks() { books.clear(); }
     @Override
     public Object createMachineGui(ContainerMachine container) {
         return new GuiMachine(container);
