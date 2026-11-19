@@ -11,10 +11,9 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current `main` version: **0.3.4-port.18** (Phase 1 + Phase 2, 2026-11-19;
-GitHub Release/tag creation is a separate step). Latest tagged GitHub release
-remains **0.3.4-port.17**:
-[port.17 on GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.17).
+Current package version: **0.3.4-port.18** (2026-11-19). Regular release,
+not a pre-release:
+[port.18 on GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.18).
 Download the release JAR, not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
 user-reported experience, not a runtime test of the new package. Automated and
