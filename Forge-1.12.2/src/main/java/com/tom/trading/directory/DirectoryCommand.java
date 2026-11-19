@@ -25,7 +25,7 @@ public final class DirectoryCommand extends CommandBase {
     @Override public String getName() { return "ttndirectory"; }
     @Override public int getRequiredPermissionLevel() { return 2; }
     @Override public String getUsage(ICommandSender sender) {
-        return "/ttndirectory status | export | import <file.json> | reindex | renew <dim> <x> <y> <z> | special add <dim> <x> <y> <z> | special remove <uuid> | special list [page] | books status | books prune | books revoke <uuid>";
+        return "/ttndirectory status | export | import <file.json> | reindex | renew <dim> <x> <y> <z> | special add <dim> <x> <y> <z> | special remove <uuid> | special list [page] | special prune | books status | books prune | books revoke <uuid>";
     }
     @Override public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
         // Also enforce on direct execution, before touching any world or persisted membership.
@@ -136,13 +136,34 @@ public final class DirectoryCommand extends CommandBase {
                     + (data.removeSpecial(id) ? " removed. Refresh the directory to see changes." : " is not listed.")));
         } else if ((args.length == 2 || args.length == 3) && args[1].equals("list")) {
             List<UUID> ids = data.specialMachines();
+            int missing = 0;
+            for (UUID id : ids) if (!data.containsIdentity(id)) missing++;
             int pages = Math.max(1, (ids.size() + 9) / 10);
             int page = args.length == 3 ? parseInt(args[2], 1, pages) : 1;
             sender.sendMessage(new TextComponentString(label + ": " + ids.size() + "/" + MachineDirectoryData.MAX_SPECIAL
-                    + "; page " + page + "/" + pages + ". Remove with /ttndirectory special remove <uuid>"));
+                    + (missing > 0 ? " (" + missing + " missing)" : "")
+                    + "; page " + page + "/" + pages + ". Remove with /ttndirectory special remove <uuid>"
+                    + (missing > 0 ? " or /ttndirectory special prune" : "")));
             for (int i = (page - 1) * 10; i < Math.min(ids.size(), page * 10); i++)
-                sender.sendMessage(new TextComponentString(ids.get(i).toString()));
+                sender.sendMessage(new TextComponentString(formatSpecialEntry(data, ids.get(i))));
+        } else if (args.length == 2 && args[1].equals("prune")) {
+            int removed = data.pruneSpecial();
+            sender.sendMessage(new TextComponentString(label + ": removed " + removed
+                    + " missing machine UUID(s). Refresh the directory to see changes."));
         } else throw new WrongUsageException(getUsage(sender));
+    }
+    private static String formatSpecialEntry(MachineDirectoryData data, UUID id) {
+        List<MachineDirectoryEntry> found = data.entriesForIdentity(id);
+        if (found.isEmpty()) return id + " [missing/stale]";
+        if (found.size() > 1) return id + " [identity conflict: " + found.size() + " locations]";
+        MachineDirectoryEntry entry = found.get(0);
+        String name = entry.name.isEmpty() ? "Vending Machine" : entry.name;
+        String owner = entry.ownerId == null ? "Ownerless"
+                : entry.ownerName.isEmpty() ? entry.ownerId.toString().substring(0, 8) : entry.ownerName;
+        String state = entry.evidence == MachineDirectoryEntry.Evidence.HINT ? " [unverified]"
+                : entry.evidence == MachineDirectoryEntry.Evidence.UNSUPPORTED ? " [unsupported]" : "";
+        return id + " | " + name + " | owner=" + owner + " | dim " + entry.address.dimension
+                + " (" + entry.address.x + ", " + entry.address.y + ", " + entry.address.z + ")" + state;
     }
     private void books(ICommandSender sender, String[] args, WorldServer overworld, MachineDirectoryData data)
             throws CommandException, IOException {
@@ -191,7 +212,7 @@ public final class DirectoryCommand extends CommandBase {
     }
     @Override public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos pos) {
         if (args.length == 1) return getListOfStringsMatchingLastWord(args, "status", "export", "import", "reindex", "renew", "special", "books");
-        if (args.length == 2 && args[0].equals("special")) return getListOfStringsMatchingLastWord(args, "add", "remove", "list");
+        if (args.length == 2 && args[0].equals("special")) return getListOfStringsMatchingLastWord(args, "add", "remove", "list", "prune");
         if (args.length == 2 && args[0].equals("books")) return getListOfStringsMatchingLastWord(args, "status", "prune", "revoke");
         return java.util.Collections.emptyList();
     }

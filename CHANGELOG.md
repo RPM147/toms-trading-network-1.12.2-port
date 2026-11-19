@@ -1,6 +1,46 @@
 # Changelog
 
-## 0.3.4-port.18-dev — Phase 1 stabilization (2026-11-19)
+## 0.3.4-port.18 — Stabilization, localization, UX & query refinements (2026-11-19)
+
+### Phase 2 (2026-11-19)
+
+- **Full Turkish localization & translated chat receipts:**
+  - Completed the missing 58 core/GUI/tooltip/TOP keys in `tr_tr.lang` and
+    localized `"Kitap ve Tüy"` in book messages.
+  - Updated `Phase7ResourcesTest` so `tr_tr.lang` is verified against `en_us.lang`
+    for complete key parity, non-empty values, and `%s` placeholder counts.
+  - Converted public chat announcements in `TradeReceiptChat` from hardcoded
+    English strings to `TextComponentTranslation` components (`chat.toms_trading_network.receipt.*`)
+    with translations in `en_us.lang`, `tr_tr.lang`, and `es_mx.lang`.
+- **Favorite toggle page, scroll & selection retention:**
+  - Removed the `page == 0` restriction on favorite mutations (`DirectoryQuery`,
+    `PlayerFavorites`) while keeping world UUID and revision validation intact.
+  - Updated `DirectoryClientState` and `GuiMachineDirectory` to stay on the
+    current page, restore scroll position, and keep the toggled machine selected;
+    unfavoriting the sole remaining row on page `> 0` of `Favorites` steps back
+    one page cleanly.
+- **Administrator shared-tab UX (`special list` & `special prune`):**
+  - Enriched `/ttndirectory special list [page]` rows with each machine's name,
+    owner, dimension/coordinates, and `[missing/stale]`, `[identity conflict]`,
+    `[unverified]`, or `[unsupported]` status.
+  - Added `/ttndirectory special prune` (`MachineDirectoryData.pruneSpecial()`) to
+    remove missing machine UUIDs from the shared tab without affecting active
+    entries.
+- **Low-risk source-level performance refinements:**
+  - Ordered `TileVendingMachine.update()` to check `world instanceof WorldServer`
+    and the 20-tick modulo schedule before `automationWorldReady()` world/tile
+    lookups when no pending transfer exists.
+  - Added `PurchaseTotalsDisplay.Cache` in `GuiMachine` and `GuiRemoteTrading` to
+    avoid recomputing identical totals three times per render frame.
+  - Updated `DirectoryPager` to iterate indexed identities (`orderedSpecialRecords`
+    / `orderedRecordsFor`) for `ECONOMY` and `FAVORITES` tabs instead of scanning
+    the entire directory, with a fallback above `RECORDS_PER_TICK` for safety.
+  - Asynchronous `RotatingTradeLog.append()` queuing remains intentionally
+    deferred until disk-latency profiling demonstrates a need.
+- **Exact-version parity:** Finalized package version at `0.3.4-port.18`
+  (rejecting `0.3.4-port.17` and `0.3.4-port.18-dev` peers).
+
+### Phase 1 (2026-11-19)
 
 - **Rate-limit quota isolation & bounded busy replies:**
   - Separated `RequestBudget` sub-limits for directory browsing (`admitDirectory`),
@@ -37,12 +77,8 @@
     and repeat-event guards, and replaced fragile `buttonList` index lookups.
   - Updated `verifyReleaseArtifact` `requiredEntries` in `build.gradle` to check
     all `port.16` and `port.17` production classes.
-- **Exact-version parity:** Bumped version to `0.3.4-port.18-dev` due to the
-  `TradeBookNetwork.Result.BUSY` wire addition.
-- **Planned for Phase 2 (`0.3.4-port.18` final):** Complete `tr_tr.lang` core keys
-  and localized chat receipt components; preserve page/scroll/selection on favorite
-  toggles; enrich `/ttndirectory special list` with machine metadata + `special prune`;
-  and apply low-risk source-level performance refinements.
+- **Exact-version parity (Phase 1):** Bumped wire protocol for
+  `TradeBookNetwork.Result.BUSY`.
 
 ## 0.3.4-port.17 — Machine-bound trade books
 

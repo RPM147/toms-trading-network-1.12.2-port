@@ -44,6 +44,26 @@ public final class MachineDirectoryData extends WorldSavedData {
     public DirectoryPager pager() { return pager; }
     public boolean isSpecial(UUID id) { return id != null && specialMachines.contains(id); }
     public List<UUID> specialMachines() { return Collections.unmodifiableList(new ArrayList<>(specialMachines)); }
+    public List<MachineDirectoryEntry> entriesForIdentity(UUID id) {
+        Set<MachineAddress> locations = id == null ? null : identities.get(id);
+        if (locations == null || locations.isEmpty()) return Collections.emptyList();
+        TreeSet<MachineAddress> sorted = new TreeSet<>(MachineAddress.ORDER);
+        sorted.addAll(locations);
+        List<MachineDirectoryEntry> result = new ArrayList<>(sorted.size());
+        for (MachineAddress address : sorted) {
+            MachineDirectoryEntry entry = entries.get(address);
+            if (entry != null) result.add(entry);
+        }
+        return Collections.unmodifiableList(result);
+    }
+    public int pruneSpecial() {
+        requireSupported();
+        int before = specialMachines.size();
+        specialMachines.removeIf(id -> !containsIdentity(id));
+        int removed = before - specialMachines.size();
+        if (removed > 0) { markDirty(); revision++; }
+        return removed;
+    }
     /** Admin tooling supplies the loaded, observed identity. No name/address-based inheritance. */
     public boolean addSpecial(MachineAddress address, UUID id) {
         requireSupported();
@@ -58,6 +78,30 @@ public final class MachineDirectoryData extends WorldSavedData {
         markDirty(); revision++; return true;
     }
     Iterator<MachineDirectoryEntry> orderedRecords() { return entries.values().iterator(); }
+    Iterator<MachineDirectoryEntry> orderedSpecialRecords() { return orderedRecordsFor(specialMachines); }
+    Iterator<MachineDirectoryEntry> orderedRecordsFor(Collection<UUID> ids) {
+        if (ids.isEmpty()) return Collections.emptyIterator();
+        int matched = 0;
+        for (UUID id : ids) {
+            Set<MachineAddress> found = identities.get(id);
+            if (found != null) {
+                matched += found.size();
+                if (matched > DirectoryPager.RECORDS_PER_TICK) return entries.values().iterator();
+            }
+        }
+        if (matched == 0) return Collections.emptyIterator();
+        TreeSet<MachineAddress> addresses = new TreeSet<>(MachineAddress.ORDER);
+        for (UUID id : ids) {
+            Set<MachineAddress> found = identities.get(id);
+            if (found != null) addresses.addAll(found);
+        }
+        List<MachineDirectoryEntry> ordered = new ArrayList<>(addresses.size());
+        for (MachineAddress address : addresses) {
+            MachineDirectoryEntry entry = entries.get(address);
+            if (entry != null) ordered.add(entry);
+        }
+        return ordered.iterator();
+    }
     public boolean hasIdentityConflict(UUID id) {
         Set<MachineAddress> locations = identities.get(id);
         return locations != null && locations.size() > 1;

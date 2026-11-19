@@ -189,6 +189,21 @@ public class AutomationLifecycleTest {
         assertEquals(7, tile.getSaleStock().getStackInSlot(0).getCount());
     }
 
+    @Test public void offScheduleTickSkipsWorldStateLookupsWhenNoPendingTransferExists() {
+        ItemStackHandler source = new ItemStackHandler(1);
+        source.setStackInSlot(0, new ItemStack(Items.DIAMOND, 7));
+        neighbor.handler = source;
+        world.worldTime = Math.floorMod(POSITION.hashCode(), 20) + 1;
+        world.worldStateLookups = 0;
+        tile.update();
+        assertEquals(0, world.worldStateLookups);
+        assertEquals(7, source.getStackInSlot(0).getCount());
+        world.worldTime = Math.floorMod(POSITION.hashCode(), 20);
+        tile.update();
+        assertTrue(world.worldStateLookups > 0);
+        assertTrue(source.getStackInSlot(0).isEmpty());
+    }
+
     private ItemStackHandler simulatedPull(Runnable callback, AtomicInteger commits) {
         ItemStackHandler source = new ItemStackHandler(1) {
             @Override public ItemStack extractItem(int slot, int amount, boolean simulate) {
@@ -226,6 +241,8 @@ public class AutomationLifecycleTest {
         TileVendingMachine machine;
         TileEntity neighbor;
         boolean neighborLoaded, serverThread;
+        long worldTime;
+        int worldStateLookups;
         IBlockState machineState;
         Runnable onDirty;
         private TestServerWorld() { super(null, null, null, 0, null); throw new AssertionError("Never construct"); }
@@ -235,11 +252,12 @@ public class AutomationLifecycleTest {
             TestServerWorld world = (TestServerWorld) ((Unsafe) field.get(null)).allocateInstance(TestServerWorld.class);
             world.neighborLoaded = true;
             world.serverThread = true;
+            world.worldTime = Math.floorMod(POSITION.hashCode(), 20);
             world.machineState = new BlockVendingMachine().getDefaultState();
             return world;
         }
         @Override public boolean isCallingFromMinecraftThread() { return serverThread; }
-        @Override public long getTotalWorldTime() { return Math.floorMod(POSITION.hashCode(), 20); }
+        @Override public long getTotalWorldTime() { return worldTime; }
         @Override public boolean isBlockLoaded(BlockPos position) {
             return POSITION.equals(position) || (neighborLoaded && POSITION.up().equals(position));
         }
@@ -247,6 +265,7 @@ public class AutomationLifecycleTest {
             return POSITION.equals(position) ? machine : POSITION.up().equals(position) ? neighbor : null;
         }
         @Override public IBlockState getBlockState(BlockPos position) {
+            worldStateLookups++;
             return POSITION.equals(position) ? machineState : Blocks.AIR.getDefaultState();
         }
         @Override public void markChunkDirty(BlockPos position, TileEntity tile) {

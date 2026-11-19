@@ -28,7 +28,7 @@ public final class DirectoryQuery {
                           UUID favoriteMachine, boolean favoriteValue) {
         if (tab == null || screenId == null || requestId <= 0 || page < 0 || page > MAX_PAGE || !DirectoryText.valid(search)
                 || (favoriteMachine == null && favoriteValue)
-                || (favoriteMachine != null && (expectedWorld == null || page != 0))
+                || (favoriteMachine != null && expectedWorld == null)
                 || (expectedWorld == null ? expectedRevision != 0 || page != 0 : expectedRevision <= 0))
             throw new IllegalArgumentException("Invalid directory query");
         this.screenId = screenId; this.requestId = requestId; this.playerDimension = playerDimension;

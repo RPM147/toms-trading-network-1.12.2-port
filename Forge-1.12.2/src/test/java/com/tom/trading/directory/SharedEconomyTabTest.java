@@ -125,11 +125,56 @@ public class SharedEconomyTabTest {
         MachineDirectoryData data = MachineDirectoryData.create(); MachineDirectoryEntry member = entry(0, UUID.randomUUID(), "Tax"); data.observe(member);
         for (int i = 1; i < 5000; i++) data.observe(entry(i, UUID.randomUUID(), "Shop"));
         List<DirectoryPage> answers = new ArrayList<>();
-        data.pager().submit(UUID.randomUUID(), query(data, 0, "", DirectoryTab.ECONOMY), 0, () -> true, answers::add);
+        data.pager().submit(UUID.randomUUID(), query(data, 0, "Shop", DirectoryTab.ALL), 0, () -> true, answers::add);
         assertEquals(4096, data.pager().tick(1, d -> true)); assertTrue(answers.isEmpty());
         data.addSpecial(member.address, member.machineId);
         assertEquals(0, data.pager().tick(2, d -> true)); assertEquals(DirectoryPage.Result.STALE, answers.get(0).result);
         assertTrue(data.isDirty());
+    }
+    @Test public void indexedEconomyAndFavoritesQueriesScanOnlyMatchingIdentitiesAndPruneCleansMissing() {
+        MachineDirectoryData data = MachineDirectoryData.create();
+        List<MachineDirectoryEntry> specials = new ArrayList<>();
+        List<MachineDirectoryEntry> favEntries = new ArrayList<>();
+        for (int i = 0; i < 5000; i++) {
+            MachineDirectoryEntry e = entry(i, UUID.randomUUID(), "Shop " + i);
+            data.observe(e);
+            if (i == 4200 || i == 150 || i == 3100) {
+                data.addSpecial(e.address, e.machineId);
+                specials.add(e);
+            }
+            if (i == 4900 || i == 12 || i == 2048 || i == 3333) {
+                favEntries.add(e);
+            }
+        }
+        List<DirectoryPage> answers = new ArrayList<>();
+        data.pager().submit(UUID.randomUUID(), query(data, 0, "", DirectoryTab.ECONOMY), 0, () -> true, answers::add);
+        assertEquals(3, data.pager().tick(1, d -> true));
+        assertEquals(3, answers.get(0).total);
+        assertEquals(Arrays.asList(150, 3100, 4200), Arrays.asList(
+                answers.get(0).rows.get(0).entry.address.x,
+                answers.get(0).rows.get(1).entry.address.x,
+                answers.get(0).rows.get(2).entry.address.x));
+
+        answers.clear();
+        Set<UUID> favorites = new HashSet<>();
+        for (MachineDirectoryEntry fav : favEntries) favorites.add(fav.machineId);
+        data.pager().submit(UUID.randomUUID(), query(data, 0, "", DirectoryTab.FAVORITES), favorites, 0, () -> true, answers::add);
+        assertEquals(4, data.pager().tick(2, d -> true));
+        assertEquals(4, answers.get(0).total);
+        assertEquals(Arrays.asList(12, 2048, 3333, 4900), Arrays.asList(
+                answers.get(0).rows.get(0).entry.address.x,
+                answers.get(0).rows.get(1).entry.address.x,
+                answers.get(0).rows.get(2).entry.address.x,
+                answers.get(0).rows.get(3).entry.address.x));
+
+        assertEquals(1, data.entriesForIdentity(specials.get(0).machineId).size());
+        data.removeVerified(specials.get(0).address);
+        assertTrue(data.entriesForIdentity(specials.get(0).machineId).isEmpty());
+        assertEquals(1, data.pruneSpecial());
+        assertEquals(0, data.pruneSpecial());
+        assertEquals(2, data.specialMachines().size());
+        assertTrue(data.isSpecial(specials.get(1).machineId));
+        assertTrue(data.isSpecial(specials.get(2).machineId));
     }
     @Test public void nonAdminCommandExecutionIsDeniedBeforeAnyWorldAccess() throws Exception {
         DirectoryCommand command = new DirectoryCommand(); assertEquals(2, command.getRequiredPermissionLevel());
@@ -139,7 +184,9 @@ public class SharedEconomyTabTest {
                     throw new AssertionError("Unauthorized command accessed " + method.getName());
                 });
         for (String[] args : Arrays.asList(new String[]{"special", "add", "0", "0", "64", "0"},
-                new String[]{"special", "remove", UUID.randomUUID().toString()}, new String[]{"special", "list"})) {
+                new String[]{"special", "remove", UUID.randomUUID().toString()}, new String[]{"special", "list"},
+                new String[]{"special", "prune"}, new String[]{"books", "status"},
+                new String[]{"books", "prune"}, new String[]{"books", "revoke", UUID.randomUUID().toString()})) {
             try { command.execute(null, denied, args); fail(); }
             catch (CommandException expected) { assertEquals("commands.generic.permission", expected.getMessage()); }
         }

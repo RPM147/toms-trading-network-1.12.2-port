@@ -208,8 +208,9 @@ public final class TileVendingMachine extends TileEntity implements IWorldNameab
     public void update() {
         if (directoryPending && world instanceof WorldServer && !chunkUnloaded)
             directoryPending = !MachineDirectory.observe(this);
-        if (automationRunning || (autoSides == 0 && !automation.hasPending()) || !automationWorldReady()
-                || Math.floorMod(world.getTotalWorldTime(), 20) != Math.floorMod(pos.hashCode(), 20)) return;
+        if (automationRunning || (autoSides == 0 && !automation.hasPending()) || !(world instanceof WorldServer)
+                || Math.floorMod(world.getTotalWorldTime(), 20) != Math.floorMod(pos.hashCode(), 20)
+                || !automationWorldReady()) return;
         automationRunning = true;
         try {
             automation.drainPending();

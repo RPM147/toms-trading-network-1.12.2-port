@@ -27,6 +27,9 @@ public final class DirectoryClientState {
     private Bookmark restoring;
     private boolean restorePageRequested;
     private int restoredScroll;
+    private MachineAddress favoriteSelectAddress;
+    private UUID favoriteSelectMachine;
+    private int favoriteRestoreScroll;
 
     /** One return path, not a global cache. No quote, row DTO, world or connection objects. */
     public static final class Bookmark {
@@ -82,9 +85,19 @@ public final class DirectoryClientState {
     public void refresh(long now) { if (!closed && !favoriteChanging()) { restoring = null; reset(now); staleRetries = 0; } }
     /** Queue one explicit set operation, keeping the verified world cursor until it is sent. */
     public boolean changeFavorite(DirectoryPage rendered, DirectoryPage.Row row, long now) {
+        return changeFavorite(rendered, row, 0, now);
+    }
+    public boolean changeFavorite(DirectoryPage rendered, DirectoryPage.Row row, int scroll, long now) {
         if (!select(rendered, row) || row.entry.machineId == null) return false;
         favoriteMachine = row.entry.machineId; favoriteValue = !row.favorite;
-        restoring = null; pageNumber = 0; page = null; selected = null;
+        boolean steppingBack = tab == DirectoryTab.FAVORITES && !favoriteValue
+                && rendered.rows.size() <= 1 && rendered.query.page > 0;
+        restoring = null;
+        pageNumber = steppingBack ? rendered.query.page - 1 : rendered.query.page;
+        favoriteSelectAddress = steppingBack ? null : row.entry.address;
+        favoriteSelectMachine = steppingBack ? null : row.entry.machineId;
+        favoriteRestoreScroll = steppingBack ? 0 : Math.max(0, Math.min(100000, scroll));
+        page = null; selected = null;
         dirty = true; due = now; status = "loading"; staleRetries = 0;
         return true;
     }
@@ -93,6 +106,10 @@ public final class DirectoryClientState {
         dirty = true; due = when; status = "loading";
         restorePageRequested = false; restoredScroll = 0;
         favoriteMachine = null; favoriteValue = false;
+        clearFavoriteRestore();
+    }
+    private void clearFavoriteRestore() {
+        favoriteSelectAddress = null; favoriteSelectMachine = null; favoriteRestoreScroll = 0;
     }
     public void turnPage(int direction, long now) {
         if (closed || waiting() || page == null || (direction != -1 && direction != 1)) return;
@@ -135,25 +152,35 @@ public final class DirectoryClientState {
                     return true;
                 }
                 // A deleted/changed row must not turn a reused index into a selected machine.
-                for (DirectoryPage.Row row : response.rows)
-                    if (row.entry.address.equals(restoring.address) && java.util.Objects.equals(row.entry.machineId, restoring.machineId))
-                        selected = row;
+                selected = findTargetRow(response.rows, restoring.address, restoring.machineId);
                 restoredScroll = restoring.scroll; restoring = null;
+            }
+            if (response.query.favoriteMachine != null) {
+                selected = findTargetRow(response.rows, favoriteSelectAddress, favoriteSelectMachine);
+                restoredScroll = favoriteRestoreScroll;
+                clearFavoriteRestore();
             }
             status = response.total == 0 ? "empty" : "ready"; staleRetries = 0;
         } else if (response.result == DirectoryPage.Result.STALE && response.query.favoriteMachine != null) {
-            page = null; status = "favorite_stale";
+            page = null; status = "favorite_stale"; clearFavoriteRestore();
         } else if (response.result == DirectoryPage.Result.STALE && staleRetries++ < 2) {
             reset(now + SPACING); status = "stale_retry";
         } else {
-            page = null; status = response.result.name().toLowerCase(java.util.Locale.ROOT);
+            page = null; status = response.result.name().toLowerCase(java.util.Locale.ROOT); clearFavoriteRestore();
         }
         return true;
+    }
+    private static DirectoryPage.Row findTargetRow(java.util.List<DirectoryPage.Row> rows, MachineAddress address, UUID machineId) {
+        if (address == null) return null;
+        for (DirectoryPage.Row row : rows) {
+            if (row.entry.address.equals(address) && java.util.Objects.equals(row.entry.machineId, machineId)) return row;
+        }
+        return null;
     }
     /** Clicks bind to the page that was actually rendered, not a new row at the same screen index. */
     public boolean select(DirectoryPage rendered, DirectoryPage.Row row) {
         if (closed || waiting() || page == null || page != rendered || !page.rows.contains(row)) return false;
         selected = row; return true;
     }
-    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; specialTabName = ""; favoriteMachine = null; }
+    public void close() { closed = true; pending = null; page = null; selected = null; restoring = null; dirty = false; specialTabName = ""; favoriteMachine = null; clearFavoriteRestore(); }
 }

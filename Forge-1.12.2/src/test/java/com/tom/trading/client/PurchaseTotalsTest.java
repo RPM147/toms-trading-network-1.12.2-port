@@ -1,10 +1,16 @@
 package com.tom.trading.client;
 
+import com.tom.trading.container.MachineView;
+import net.minecraft.init.Bootstrap;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
 
 public class PurchaseTotalsTest {
+    @BeforeClass public static void bootstrap() { Bootstrap.register(); }
     @Test public void multipliesEveryDefinitionIndependentlyForMultiplePaymentAndDeliveryItems() {
         PurchaseTotals totals = PurchaseTotals.calculate("7", new int[]{3, 8, 0, 1, 2, 0, 64, 0});
         assertTrue(totals.valid());
@@ -56,5 +62,41 @@ public class PurchaseTotalsTest {
         offer[0] = 100;
         assertEquals(9L, totals.quantity(0));
         assertEquals(3L, totals.quantity(4));
+    }
+
+    @Test public void displayCacheReusesSnapshotUntilViewRevisionOrBatchChanges() {
+        PurchaseTotalsDisplay.Cache cache = new PurchaseTotalsDisplay.Cache();
+        MachineView view = new MachineView();
+        view.offerRevision = 1;
+        view.templates[0] = new ItemStack(Items.EMERALD);
+        view.quantities[0] = 3;
+        view.templates[4] = new ItemStack(Items.DIAMOND);
+        view.quantities[4] = 2;
+
+        PurchaseTotals first = cache.snapshot(view, "4");
+        assertTrue(first.valid());
+        assertEquals(12L, first.total(false));
+        assertEquals(8L, first.total(true));
+        assertSame(first, cache.snapshot(view, "4"));
+
+        PurchaseTotals batchChanged = cache.snapshot(view, "5");
+        assertNotSame(first, batchChanged);
+        assertEquals(15L, batchChanged.total(false));
+
+        view.offerRevision = 2;
+        view.quantities[0] = 10;
+        PurchaseTotals revisionChanged = cache.snapshot(view, "5");
+        assertNotSame(batchChanged, revisionChanged);
+        assertEquals(50L, revisionChanged.total(false));
+
+        MachineView replaced = new MachineView();
+        replaced.offerRevision = 2;
+        replaced.templates[0] = new ItemStack(Items.EMERALD);
+        replaced.quantities[0] = 1;
+        replaced.templates[4] = new ItemStack(Items.DIAMOND);
+        replaced.quantities[4] = 1;
+        PurchaseTotals viewChanged = cache.snapshot(replaced, "5");
+        assertNotSame(revisionChanged, viewChanged);
+        assertEquals(5L, viewChanged.total(false));
     }
 }

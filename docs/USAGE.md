@@ -79,7 +79,10 @@ different items is not currency conversion: use the breakdown for actual costs.
 Click **[+]** next to a machine to add it, or **[*]** to remove it. The marker changes
 only favorites and never purchases. Clicking the rest of the row still opens the
 trade. Keyboard users can select a row with arrows and press **F** while the list
-is focused. Typing F inside the search field continues to type normally.
+is focused. Typing F inside the search field continues to type normally. Since
+`0.3.4-port.18` (2026-11-19), toggling a favorite keeps your current directory
+page, scroll offset, and row selection (stepping back one page automatically if
+you remove the last favorite on a page past page 1 of **Favorites**).
 
 The **Favorites** tab contains your own selected machines and supports the same
 search/paging as other tabs. Favorites are stored by stable machine UUID in your
@@ -170,7 +173,7 @@ pages, so unusually long/multi-item entries can reduce the visible history.
 Only this recent history is retained; a new book cannot restore evicted records.
 
 Book bindings and history use `<world>/data/ttn_trade_books.dat`, saved through
-Minecraft's normal world saves. Since `0.3.4-port.18-dev` (2026-11-19), the held
+Minecraft's normal world saves. Since `0.3.4-port.18` (2026-11-19), the held
 item stores only the binding marker and tooltip metadata rather than caching
 up to 24 KiB of `pages` NBT in the book item; older bound books have cached
 `pages` stripped automatically when opened. If you bind or open books faster than
@@ -244,12 +247,16 @@ Level-2 administrator commands:
 /ttndirectory special add <dimension> <x> <y> <z>
 /ttndirectory special list [page]
 /ttndirectory special remove <machine-uuid>
+/ttndirectory special prune
 ```
 
 Dimension `0` is the Overworld. Add requires the real supported target to be
 already loaded, with a unique observed machine identity; the command does not
 load chunks. Use the machine UUID, not the owner UUID, when removing a member.
-List shows ten IDs per page; at most 256 memberships are stored per world.
+List shows ten entries per page (with machine name, owner, dimension/coordinates,
+and missing/conflict/unverified status since `0.3.4-port.18` on 2026-11-19); at
+most 256 memberships are stored per world. Use `/ttndirectory special prune` to
+remove shared-tab entries whose machines are no longer in the directory.
 
 Renaming preserves membership. A replacement/new UUID does not inherit it; remove
 the old UUID and add the new machine explicitly. Removing membership does not
@@ -260,8 +267,11 @@ with the world, not immediately committed to an external database.
 ## Announcements and compatibility
 
 Successful trades can announce their actual paid/delivered items to all players.
-The server's `publicTradeAnnouncements` setting controls this behavior and requires
-restart. Chat receipts and the separate transaction log can be enabled independently.
+Since `0.3.4-port.18` (2026-11-19), public chat receipts use translation
+components (`chat.toms_trading_network.receipt.*`) so players see announcements in
+their own game language (`en_us`, `tr_tr`, `es_mx`). The server's
+`publicTradeAnnouncements` setting controls this behavior and requires restart.
+Chat receipts and the separate transaction log can be enabled independently.
 
 Use the server-side `RemoteSettings` configuration for remote-trading controls.
 Changing settings is an administrator operation; client settings cannot grant

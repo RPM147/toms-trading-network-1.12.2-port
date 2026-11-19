@@ -6,7 +6,10 @@ import net.minecraft.network.PacketBuffer;
 import net.minecraft.network.play.server.SPacketChat;
 import net.minecraft.util.text.ChatType;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.util.text.event.HoverEvent;
+import net.minecraft.util.text.translation.LanguageMap;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -20,6 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
 
 public class TradeReceiptTest {
+    @BeforeClass public static void loadLanguage() {
+        LanguageMap.inject(TradeReceiptTest.class.getResourceAsStream("/assets/toms_trading_network/lang/en_us.lang"));
+    }
+
     @Test public void sameItemInBothDirectionsIsRecordedEvenWhenAllInventoriesHaveZeroNetChange() {
         TradeItem coin = item("test:coin", "", 1024);
         TradeDefinition leg = TradeDefinition.direct(coin, 1024, true);
@@ -117,6 +124,24 @@ public class TradeReceiptTest {
         TradePlan failed = TradePlanner.plan(offer, TradePolicy.NORMAL, 1, empty, empty, empty);
         try { TradeReceipt.prepare(failed, identity -> "Unused"); fail(); } catch (IllegalArgumentException expected) { }
         try { failed.getPaidItems().put(item, 1L); fail(); } catch (UnsupportedOperationException expected) { }
+    }
+
+    @Test public void chatAnnouncementUsesTranslationComponentsForSummaryOwnerAndHoverHeaders() {
+        TradeItem coin = item("test:coin", "", 64), apple = item("test:apple", "", 64);
+        TradeReceipt unowned = TradeReceipt.prepare(displayPlan(Collections.singletonMap(coin, 3L),
+                Collections.singletonMap(apple, 2L)), TradeItem::getItemId)
+                .bind(UUID.randomUUID(), "Buyer", UUID.randomUUID(), null, null);
+        ITextComponent chat = unowned.createAnnouncement();
+        assertTrue(chat instanceof TextComponentTranslation);
+        TextComponentTranslation summary = (TextComponentTranslation) chat;
+        assertEquals("chat.toms_trading_network.receipt.summary", summary.getKey());
+        assertTrue(summary.getFormatArgs()[2] instanceof TextComponentTranslation);
+        assertEquals("chat.toms_trading_network.receipt.unowned",
+                ((TextComponentTranslation) summary.getFormatArgs()[2]).getKey());
+        String json = ITextComponent.Serializer.componentToJson(chat);
+        assertTrue(json.contains("chat.toms_trading_network.receipt.delivered"));
+        assertTrue(json.contains("chat.toms_trading_network.receipt.paid"));
+        assertTrue(json.contains("chat.toms_trading_network.receipt.none"));
     }
 
     static TradeReceipt sample() {

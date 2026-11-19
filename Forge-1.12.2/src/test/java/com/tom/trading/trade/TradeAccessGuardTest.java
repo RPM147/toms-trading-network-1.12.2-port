@@ -35,7 +35,11 @@ import static org.junit.Assert.*;
 public class TradeAccessGuardTest {
     private StubPlayer player;
     private TileVendingMachine tile;
-    @BeforeClass public static void bootstrap() { Bootstrap.register(); }
+    @BeforeClass public static void bootstrap() {
+        Bootstrap.register();
+        net.minecraft.util.text.translation.LanguageMap.inject(
+                TradeAccessGuardTest.class.getResourceAsStream("/assets/toms_trading_network/lang/en_us.lang"));
+    }
     private static <T> T unconstructed(Class<T> type) throws Exception {
         Field field = Unsafe.class.getDeclaredField("theUnsafe"); field.setAccessible(true);
         return type.cast(((Unsafe) field.get(null)).allocateInstance(type));

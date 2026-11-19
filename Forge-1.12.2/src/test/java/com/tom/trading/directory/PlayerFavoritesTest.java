@@ -130,7 +130,9 @@ public class PlayerFavoritesTest {
         data.removeVerified(new MachineAddress(0, 1, 64, 0));
         data.observe(entry(3, conflicted, MachineDirectoryEntry.Evidence.OBSERVED));
         data.observe(entry(4, next, MachineDirectoryEntry.Evidence.OBSERVED));
-        assertEquals(DirectoryPage.Result.OK, PlayerFavorites.apply(player, data, change(data, next, true)));
+        assertEquals(DirectoryPage.Result.OK, PlayerFavorites.apply(player, data,
+                new DirectoryQuery(UUID.randomUUID(), 1, 0, 1, data.getWorldId(), data.getRevision(), "",
+                        DirectoryTab.ALL, next, true)));
         assertEquals(new HashSet<>(Arrays.asList(conflicted, next)), PlayerFavorites.read(player, data.getWorldId()));
     }
 }

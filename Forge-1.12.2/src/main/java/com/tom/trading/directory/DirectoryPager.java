@@ -89,7 +89,10 @@ public final class DirectoryPager {
         Job(DirectoryQuery query, Set<UUID> favorites, long now, BooleanSupplier active, Consumer<DirectoryPage> answer) {
             this.query = query; started = now; revision = data.getRevision(); search = DirectoryText.fold(query.search);
             this.favorites = Collections.unmodifiableSet(new HashSet<>(favorites));
-            entries = data.orderedRecords(); this.active = active; this.answer = answer;
+            if (query.tab == DirectoryTab.ECONOMY) entries = data.orderedSpecialRecords();
+            else if (query.tab == DirectoryTab.FAVORITES) entries = data.orderedRecordsFor(this.favorites);
+            else entries = data.orderedRecords();
+            this.active = active; this.answer = answer;
         }
         boolean pageComplete() {
             // Empty search already knows its total. The common first page visits only 50 records.

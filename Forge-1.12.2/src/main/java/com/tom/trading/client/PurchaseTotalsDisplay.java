@@ -91,4 +91,23 @@ final class PurchaseTotalsDisplay {
     private static int tooltipWidth(int screenWidth) { return Math.max(80, Math.min(400, screenWidth - 40)); }
     private static String number(long value) { return NUMBERS.format(value); }
     private static String tr(String key, Object... args) { return I18n.format(PREFIX + key, args); }
+
+    static final class Cache {
+        private MachineView cachedView;
+        private long cachedRevision;
+        private String cachedBatch;
+        private PurchaseTotals cached;
+
+        PurchaseTotals snapshot(MachineView view, String batch) {
+            if (cached != null && cachedView == view && cachedRevision == view.offerRevision
+                    && java.util.Objects.equals(cachedBatch, batch)) {
+                return cached;
+            }
+            cached = PurchaseTotalsDisplay.snapshot(view, batch);
+            cachedView = view;
+            cachedRevision = view.offerRevision;
+            cachedBatch = batch;
+            return cached;
+        }
+    }
 }

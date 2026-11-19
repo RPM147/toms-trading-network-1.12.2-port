@@ -68,12 +68,58 @@ public class DirectoryFavoriteStateTest {
         other.accept(reply(query, true), NOW); assertEquals(machine, other.selected().entry.machineId);
         assertEquals(30, other.consumeRestoredScroll());
     }
-    @Test public void mutationDtoRequiresAnExplicitWorldAndFirstPage() {
+    @Test public void mutationDtoRequiresAnExplicitWorld() {
         try { new DirectoryQuery(UUID.randomUUID(), 1, 0, 0, null, 0, "", DirectoryTab.ALL, machine, true); fail(); }
         catch (IllegalArgumentException expected) { }
-        try { new DirectoryQuery(UUID.randomUUID(), 1, 0, 1, world, 1, "", DirectoryTab.ALL, machine, true); fail(); }
+        try { new DirectoryQuery(UUID.randomUUID(), 1, 0, -1, world, 1, "", DirectoryTab.ALL, machine, true); fail(); }
         catch (IllegalArgumentException expected) { }
         try { new DirectoryQuery(UUID.randomUUID(), 1, 0, 0, world, 1, "", DirectoryTab.ALL, null, true); fail(); }
         catch (IllegalArgumentException expected) { }
+        DirectoryQuery paged = new DirectoryQuery(UUID.randomUUID(), 1, 0, 1, world, 1, "", DirectoryTab.ALL, machine, true);
+        assertEquals(1, paged.page);
+    }
+    @Test public void favoriteTogglePreservesPageScrollAndSelectionAndStepsBackWhenLastFavoriteOnPageIsRemoved() {
+        DirectoryClientState state = new DirectoryClientState(0, NOW);
+        List<DirectoryPage.Row> rows = new ArrayList<>();
+        for (int i = 0; i < DirectoryQuery.PAGE_SIZE; i++) {
+            rows.add(new DirectoryPage.Row(new MachineDirectoryEntry(new MachineAddress(0, i, 64, 1),
+                    UUID.randomUUID(), UUID.randomUUID(), "Owner", "Shop " + i, MachineDirectoryEntry.Evidence.OBSERVED),
+                    DirectoryPage.State.RECORDED, false));
+        }
+        DirectoryPage page0 = new DirectoryPage(state.poll(NOW), DirectoryPage.Result.OK, world, 1, 51, false, rows);
+        assertTrue(state.accept(page0, NOW));
+        state.turnPage(1, LATER);
+        DirectoryPage.Row target = new DirectoryPage.Row(new MachineDirectoryEntry(new MachineAddress(0, 50, 64, 1),
+                machine, UUID.randomUUID(), "Owner", "Shop 50", MachineDirectoryEntry.Evidence.OBSERVED),
+                DirectoryPage.State.RECORDED, false);
+        DirectoryPage page1 = new DirectoryPage(state.poll(LATER), DirectoryPage.Result.OK, world, 1, 51, false,
+                Collections.singletonList(target));
+        assertTrue(state.accept(page1, LATER));
+        assertTrue(state.changeFavorite(page1, target, 240, LATER));
+        DirectoryQuery mutation = state.poll(LATER + 600_000_000L);
+        assertEquals(1, mutation.page);
+        assertTrue(mutation.favoriteValue);
+        DirectoryPage.Row updated = new DirectoryPage.Row(target.entry, DirectoryPage.State.RECORDED, true);
+        assertTrue(state.accept(new DirectoryPage(mutation, DirectoryPage.Result.OK, world, 1, 51, false,
+                Collections.singletonList(updated)), LATER + 600_000_000L));
+        assertEquals(240, state.consumeRestoredScroll());
+        assertSame(updated, state.selected());
+
+        DirectoryClientState favTab = new DirectoryClientState(0, NOW);
+        favTab.setTab(DirectoryTab.FAVORITES, NOW);
+        DirectoryPage favPage0 = new DirectoryPage(favTab.poll(NOW), DirectoryPage.Result.OK, world, 1, 51, false, rows);
+        assertTrue(favTab.accept(favPage0, NOW));
+        favTab.turnPage(1, LATER);
+        DirectoryPage favPage1 = new DirectoryPage(favTab.poll(LATER), DirectoryPage.Result.OK, world, 1, 51, false,
+                Collections.singletonList(updated));
+        assertTrue(favTab.accept(favPage1, LATER));
+        assertTrue(favTab.changeFavorite(favPage1, updated, 240, LATER));
+        DirectoryQuery stepBack = favTab.poll(LATER + 600_000_000L);
+        assertEquals(0, stepBack.page);
+        assertFalse(stepBack.favoriteValue);
+        assertTrue(favTab.accept(new DirectoryPage(stepBack, DirectoryPage.Result.OK, world, 1, 50, false, rows),
+                LATER + 600_000_000L));
+        assertEquals(0, favTab.consumeRestoredScroll());
+        assertNull(favTab.selected());
     }
 }

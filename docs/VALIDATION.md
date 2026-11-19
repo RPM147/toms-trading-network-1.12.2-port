@@ -1,5 +1,45 @@
 # Validation scope and source preparation
 
+## Port.18 (Phase 1 + Phase 2) — 2026-11-19
+
+- Java 8 compilation, full JUnit test execution, reobfuscation, release packaging
+  and `verifyReleaseArtifact` passed on Windows using existing caches and
+  process-local 512 MiB heaps (`_JAVA_OPTIONS=-Xms64m -Xmx512m -XX:CICompilerCount=2`,
+  `--max-workers=1`). Pinned optional API JARs were read only; no live world or
+  running game server was modified or launched.
+- **Full automated suite: 300 JUnit tests in 53 classes passed**, with no
+  failures, errors or skips (`cleanTest test`).
+- Phase 2 additions verified in the final run:
+  - `Phase7ResourcesTest` (5): full `en_us`, `es_mx`, and `tr_tr` key parity,
+    non-empty values, `%s` placeholder count agreement (including the 58
+    restored Turkish core keys and 10 chat receipt keys), and `"Kitap ve Tüy"`
+    terminology.
+  - `TradeReceiptTest` (7), `TradeAccessGuardTest` (6): `TextComponentTranslation`
+    chat announcement structure, unowned fallback key, hover headers, bounded
+    packet encoding, and English `LanguageMap` rendering.
+  - `DirectoryFavoriteStateTest` (6), `DirectoryNetworkTest` (13),
+    `PlayerFavoritesTest` (7): page, scroll, and selection retention on favorite
+    toggles, plus single-item last-page step-back in `Favorites`.
+  - `SharedEconomyTabTest` (10): indexed `ECONOMY`/`FAVORITES` paging across
+    5000 entries, `pruneSpecial()`, `entriesForIdentity(...)`, and permission
+    denial for `special prune` and `books status | prune | revoke`.
+  - `AutomationLifecycleTest` (9): zero blockstate lookups on off-schedule ticks
+    when no pending transfer exists.
+  - `PurchaseTotalsTest` (6): `PurchaseTotalsDisplay.Cache` reuse and
+    invalidation on batch, revision, or view replacement.
+  - `BuildInfoTest` (3): exact `0.3.4-port.18` peer matching (rejecting both
+    `0.3.4-port.17` and `0.3.4-port.18-dev`).
+- `verifyReleaseArtifact` verifies all `port.16`, `port.17`, and `port.18`
+  classes inside the reobfuscated JAR.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.18.jar`, **409342 bytes**.
+- SHA-256: `33fc6889e37f838b5192b41d5cd3434507e62eeb6d29ee058996cb54bfbe4269`.
+- Pending manual acceptance: in-game Turkish GUI/tooltip/chat-receipt display,
+  multi-page favorite toggles (`ALL` and `FAVORITES`), `/ttndirectory special list`
+  / `special prune` output, `GuiMachine` quantity popup & Numpad Enter, directory
+  rapid reopen, book `busy` recovery, `/ttndirectory books status | prune | revoke`,
+  plus earlier pending multiplayer save/restart and GUI-scale visual checks from
+  `port.14`–`port.17`.
+
 ## Port.18-dev Phase 1 stabilization — 2026-11-19
 
 - Java 8 compilation, full JUnit test execution, reobfuscation, release packaging

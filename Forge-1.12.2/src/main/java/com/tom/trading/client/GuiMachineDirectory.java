@@ -222,7 +222,8 @@ public final class GuiMachineDirectory extends GuiScreen {
     }
     private void changeFavorite(DirectoryPage.Row row) {
         if (opening.waiting() || renderedPage == null || row == null) return;
-        if (state.changeFavorite(renderedPage, row, System.nanoTime())) {
+        int scroll = entries == null ? 0 : entries.getAmountScrolled();
+        if (state.changeFavorite(renderedPage, row, scroll, System.nanoTime())) {
             renderedPage = null; cachedDetails = null; openStatus = "open_hint"; updateButtons();
         }
     }

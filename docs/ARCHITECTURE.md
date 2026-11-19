@@ -125,7 +125,9 @@ Never weaken authorization or quotas to make an unavailable target appear usable
 - Directory/tile/preview formats remain 2/3/1. New appended book message types
   require port.17 on every peer under the existing exact-version handshake.
 
-## Port.18-dev Phase 1 updates (2026-11-19)
+## Port.18 updates (2026-11-19)
+
+### Phase 1 (2026-11-19)
 
 - `RequestBudget` separates the 2/s sub-ceilings for directory queries, remote
   opens and trade-book actions while retaining the shared 40-request/s total cap
@@ -145,8 +147,26 @@ Never weaken authorization or quotas to make an unavailable target appear usable
   and preserving unsupported payloads (`isDirty()` remains false). Operators can
   inspect, prune orphaned ledgers or revoke machine keys via
   `/ttndirectory books status | prune | revoke <machine-uuid>`.
-- `TradeBookNetwork.Result.BUSY` changes the wire enum, requiring `0.3.4-port.18-dev`
+- `TradeBookNetwork.Result.BUSY` changes the wire enum, requiring `0.3.4-port.18`
   on every peer under the exact-version handshake.
+
+### Phase 2 (2026-11-19)
+
+- Favorite mutations in `DirectoryQuery` and `PlayerFavorites` preserve the
+  requested page (`0..MAX_PAGE`) while retaining the `expectedWorld`,
+  `expectedRevision`, and authenticated-player guarantees; `DirectoryClientState`
+  restores scroll and machine selection on the updated page.
+- `DirectoryPager` serves `ECONOMY` and `FAVORITES` tabs via
+  `MachineDirectoryData.orderedSpecialRecords()` / `orderedRecordsFor(...)`
+  using the `identities` index in `MachineAddress.ORDER`, falling back to the
+  full ordered iterator only if matching records exceed `RECORDS_PER_TICK`.
+- `TradeReceiptChat` constructs `TextComponentTranslation` components (`chat.toms_trading_network.receipt.*`)
+  rather than hardcoded English strings, while keeping `TradeReceipt.ownerName`
+  unchanged for JSONL and trade-book consistency.
+- `TileVendingMachine.update()` checks the 20-tick modulo schedule before
+  `automationWorldReady()` world/tile lookups when no pending transfer exists,
+  and `PurchaseTotalsDisplay.Cache` caches per-frame quotes in `GuiMachine` and
+  `GuiRemoteTrading` keyed by view reference, `offerRevision`, and batch string.
 
 ## Build invariants
 

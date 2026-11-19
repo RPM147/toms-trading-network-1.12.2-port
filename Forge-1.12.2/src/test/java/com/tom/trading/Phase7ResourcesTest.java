@@ -17,18 +17,24 @@ public class Phase7ResourcesTest {
     }
 
     @Test public void languagesHaveMatchingKeysAndParameterCounts() throws Exception {
-        Properties english = new Properties(), spanish = new Properties();
+        Properties english = new Properties(), spanish = new Properties(), turkish = new Properties();
         try (InputStreamReader reader = new InputStreamReader(resource("lang/en_us.lang"), StandardCharsets.UTF_8)) {
             english.load(reader);
         }
         try (InputStreamReader reader = new InputStreamReader(resource("lang/es_mx.lang"), StandardCharsets.UTF_8)) {
             spanish.load(reader);
         }
+        try (InputStreamReader reader = new InputStreamReader(resource("lang/tr_tr.lang"), StandardCharsets.UTF_8)) {
+            turkish.load(reader);
+        }
         assertEquals(english.stringPropertyNames(), spanish.stringPropertyNames());
+        assertEquals(english.stringPropertyNames(), turkish.stringPropertyNames());
         for (String key : english.stringPropertyNames()) {
-            assertFalse(spanish.getProperty(key).isEmpty());
-            assertEquals(key, english.getProperty(key).split("%s", -1).length,
-                    spanish.getProperty(key).split("%s", -1).length);
+            assertFalse(key, spanish.getProperty(key).isEmpty());
+            assertFalse(key, turkish.getProperty(key).isEmpty());
+            int placeholders = english.getProperty(key).split("%s", -1).length;
+            assertEquals(key, placeholders, spanish.getProperty(key).split("%s", -1).length);
+            assertEquals(key, placeholders, turkish.getProperty(key).split("%s", -1).length);
         }
     }
 
@@ -52,13 +58,10 @@ public class Phase7ResourcesTest {
         try (InputStreamReader reader = new InputStreamReader(resource("lang/en_us.lang"), StandardCharsets.UTF_8)) { english.load(reader); }
         try (InputStreamReader reader = new InputStreamReader(resource("lang/tr_tr.lang"), StandardCharsets.UTF_8)) { turkish.load(reader); }
         for (String key : english.stringPropertyNames()) {
-            if (!key.startsWith("gui.toms_trading_network.directory.") && !key.startsWith("key.")
-                    && !key.startsWith("gui.toms_trading_network.remote.")
-                    && !key.startsWith("gui.toms_trading_network.totals.")
-                    && !key.startsWith("gui.toms_trading_network.book.")) continue;
             assertNotNull(key, turkish.getProperty(key));
             assertEquals(key, english.getProperty(key).split("%s", -1).length, turkish.getProperty(key).split("%s", -1).length);
         }
+        assertFalse(turkish.getProperty("gui.toms_trading_network.book.single_book").contains("Book and Quill"));
         for (com.tom.trading.directory.DirectoryPage.State state : com.tom.trading.directory.DirectoryPage.State.values())
             assertNotNull(english.getProperty("gui.toms_trading_network.directory.row." + state.name().toLowerCase(java.util.Locale.ROOT)));
     }

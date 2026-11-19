@@ -33,6 +33,7 @@ public final class GuiMachine extends GuiContainer {
     private final ResourceLocation texture;
     private GuiTextField nameField, batchField, quantityField;
     private GuiButton tradeButton, popupApplyButton;
+    private final PurchaseTotalsDisplay.Cache totalsCache = new PurchaseTotalsDisplay.Cache();
     private int popupSlot = -1, tick, nameDirtyAt = -1, lastRevision = -1;
     private boolean consumedMouse;
     private boolean totalsVisible;
@@ -380,7 +381,7 @@ public final class GuiMachine extends GuiContainer {
         }
         RenderHelper.disableStandardItemLighting();
         if (!machine.configuration && batchField != null) {
-            PurchaseTotals totals = PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText());
+            PurchaseTotals totals = totalsCache.snapshot(machine.view, batchField.getText());
             fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, false), 8, PurchaseTotalsDisplay.ROW_Y, 4210752);
             fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, true), 98, PurchaseTotalsDisplay.ROW_Y, 4210752);
             fontRenderer.drawString("F1", 82, PurchaseTotalsDisplay.ROW_Y, 0x555555);
@@ -421,7 +422,7 @@ public final class GuiMachine extends GuiContainer {
                     lines.add(tr("ghost_hint"));
                 }
                 else if (!machine.view.templates[slot].isEmpty()) PurchaseTotalsDisplay.appendItem(lines, machine.view, slot,
-                        PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText()));
+                        totalsCache.snapshot(machine.view, batchField.getText()));
                 if (!totalsVisible) drawHoveringText(lines, mouseX, mouseY);
             } else {
                 if (!totalsVisible) renderHoveredToolTip(mouseX, mouseY);
@@ -441,7 +442,7 @@ public final class GuiMachine extends GuiContainer {
         }
         if (!machine.configuration && (totalsVisible || totalsAt(mouseX, mouseY))) {
             drawHoveringText(PurchaseTotalsDisplay.details(machine.view,
-                            PurchaseTotalsDisplay.snapshot(machine.view, batchField.getText()), fontRenderer, width),
+                            totalsCache.snapshot(machine.view, batchField.getText()), fontRenderer, width),
                     PurchaseTotalsDisplay.tooltipX(width), totalsVisible ? guiTop + PurchaseTotalsDisplay.ROW_Y : mouseY);
         }
         GlStateManager.enableDepth();

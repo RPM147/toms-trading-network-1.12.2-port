@@ -35,6 +35,7 @@ public final class GuiRemoteTrading extends GuiContainer {
     private final DirectoryTab returnTab;
     private DirectoryClientState.Bookmark returnBookmark;
     private INetHandler bookmarkConnection;
+    private final PurchaseTotalsDisplay.Cache totalsCache = new PurchaseTotalsDisplay.Cache();
     public GuiRemoteTrading(ContainerRemoteTrading machine) { this(machine, DirectoryTab.ALL); }
     public GuiRemoteTrading(ContainerRemoteTrading machine, DirectoryTab returnTab) {
         super(machine); this.machine = machine; this.returnTab = java.util.Objects.requireNonNull(returnTab); xSize = 176; ySize = 166;
@@ -148,7 +149,7 @@ public final class GuiRemoteTrading extends GuiContainer {
             itemRender.renderItemOverlayIntoGUI(fontRenderer, item, definitionX(slot), 35, Integer.toString(machine.view.quantities[slot]));
         }
         RenderHelper.disableStandardItemLighting();
-        PurchaseTotals totals = PurchaseTotalsDisplay.snapshot(machine.view, batch.getText());
+        PurchaseTotals totals = totalsCache.snapshot(machine.view, batch.getText());
         fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, false), 8, PurchaseTotalsDisplay.ROW_Y, 4210752);
         fontRenderer.drawString(PurchaseTotalsDisplay.compact(totals, true), 98, PurchaseTotalsDisplay.ROW_Y, 4210752);
         fontRenderer.drawString("F1", 82, PurchaseTotalsDisplay.ROW_Y, 0x555555);
@@ -159,7 +160,7 @@ public final class GuiRemoteTrading extends GuiContainer {
         int slot = definitionAt(mouseX, mouseY);
         if (slot >= 0 && !machine.view.templates[slot].isEmpty()) {
             List<String> lines = new ArrayList<>(getItemToolTip(machine.view.templates[slot]));
-            PurchaseTotalsDisplay.appendItem(lines, machine.view, slot, PurchaseTotalsDisplay.snapshot(machine.view, batch.getText()));
+            PurchaseTotalsDisplay.appendItem(lines, machine.view, slot, totalsCache.snapshot(machine.view, batch.getText()));
             if (!totalsVisible) drawHoveringText(lines, mouseX, mouseY);
         } else if (!totalsVisible) renderHoveredToolTip(mouseX, mouseY);
         String feedback = machine.view.offerRevision == 0 ? tr("remote.loading")
@@ -167,7 +168,7 @@ public final class GuiRemoteTrading extends GuiContainer {
         fontRenderer.drawSplitString(feedback, guiLeft, guiTop + ySize + 4, xSize, 0xFFFFFF);
         if (totalsVisible || totalsAt(mouseX, mouseY)) {
             drawHoveringText(PurchaseTotalsDisplay.details(machine.view,
-                            PurchaseTotalsDisplay.snapshot(machine.view, batch.getText()), fontRenderer, width),
+                            totalsCache.snapshot(machine.view, batch.getText()), fontRenderer, width),
                     PurchaseTotalsDisplay.tooltipX(width), totalsVisible ? guiTop + PurchaseTotalsDisplay.ROW_Y : mouseY);
         }
         GlStateManager.enableDepth();

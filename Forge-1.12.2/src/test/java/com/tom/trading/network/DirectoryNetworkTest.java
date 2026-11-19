@@ -197,14 +197,23 @@ public class DirectoryNetworkTest {
             } finally { bytes.release(); }
         }
     }
-    @Test public void favoriteMutationsRequireBoundSaveAndFirstPage() {
+    @Test public void favoriteMutationsRequireBoundSaveAndPreserveRequestedPage() {
         UUID screen = UUID.randomUUID(), machine = UUID.randomUUID(), world = UUID.randomUUID();
         try { new DirectoryQuery(screen, 1, 0, 0, null, 0, "", DirectoryTab.ALL, machine, true); fail(); }
         catch (IllegalArgumentException expected) { }
-        try { new DirectoryQuery(screen, 1, 0, 1, world, 1, "", DirectoryTab.ALL, machine, false); fail(); }
+        try { new DirectoryQuery(screen, 1, 0, -1, world, 1, "", DirectoryTab.ALL, machine, false); fail(); }
+        catch (IllegalArgumentException expected) { }
+        try { new DirectoryQuery(screen, 1, 0, DirectoryQuery.MAX_PAGE + 1, world, 1, "", DirectoryTab.ALL, machine, false); fail(); }
         catch (IllegalArgumentException expected) { }
         try { new DirectoryQuery(screen, 1, 0, 0, world, 1, "", DirectoryTab.ALL, null, true); fail(); }
         catch (IllegalArgumentException expected) { }
+        DirectoryQuery paged = new DirectoryQuery(screen, 1, 0, 1, world, 1, "", DirectoryTab.ALL, machine, true);
+        ByteBuf bytes = Unpooled.buffer();
+        try {
+            new DirectoryNetwork.RequestPage(paged).toBytes(bytes);
+            DirectoryNetwork.RequestPage decoded = new DirectoryNetwork.RequestPage(); decoded.fromBytes(bytes);
+            assertTrue(decoded.valid); assertEquals(1, decoded.query.page); assertEquals(machine, decoded.query.favoriteMachine);
+        } finally { bytes.release(); }
     }
     @Test public void directoryBudgetEmitsBoundedBusyNotificationsAndBusyPageRoundTrips() {
         long now = 10_000_000_000L; RequestBudget budget = new RequestBudget();

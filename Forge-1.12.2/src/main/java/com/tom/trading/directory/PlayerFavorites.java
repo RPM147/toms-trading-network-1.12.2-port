@@ -45,7 +45,7 @@ public final class PlayerFavorites {
     /** Validate the save/cursor and identity before touching this authenticated player's data. */
     public static DirectoryPage.Result apply(NBTTagCompound entityData, MachineDirectoryData data, DirectoryQuery query) {
         if (!data.isSupported()) return DirectoryPage.Result.UNAVAILABLE;
-        if (query.favoriteMachine == null || query.page != 0 || !data.getWorldId().equals(query.expectedWorld)
+        if (query.favoriteMachine == null || !data.getWorldId().equals(query.expectedWorld)
                 || query.expectedRevision != data.getRevision()) return DirectoryPage.Result.STALE;
         // Removing an obsolete UUID remains safe. Adding hints, unknown or conflicting identities does not.
         if (query.favoriteValue && !data.isUniqueIdentity(query.favoriteMachine)) return DirectoryPage.Result.STALE;
