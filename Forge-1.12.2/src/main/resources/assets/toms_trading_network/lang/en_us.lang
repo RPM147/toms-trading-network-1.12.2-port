@@ -147,6 +147,7 @@ gui.toms_trading_network.book.capacity=The server's trade book capacity is full.
 gui.toms_trading_network.book.bound=Book bound. Completed trades will be recorded; right-click the book to read.
 gui.toms_trading_network.book.loading=Updating trade book...
 gui.toms_trading_network.book.empty=No recorded trades yet.
+gui.toms_trading_network.book.busy=Trade book is busy. Try again shortly.
 gui.toms_trading_network.totals.invalid_batch=Enter a trade count from 1 to 1024.
 gui.toms_trading_network.totals.unavailable=The live offer is not ready.
 gui.toms_trading_network.totals.receive=You receive:

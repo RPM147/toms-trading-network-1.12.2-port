@@ -32,6 +32,7 @@ public final class GuiMachine extends GuiContainer {
     private final ContainerMachine machine;
     private final ResourceLocation texture;
     private GuiTextField nameField, batchField, quantityField;
+    private GuiButton tradeButton, popupApplyButton;
     private int popupSlot = -1, tick, nameDirtyAt = -1, lastRevision = -1;
     private boolean consumedMouse;
     private boolean totalsVisible;
@@ -70,10 +71,13 @@ public final class GuiMachine extends GuiContainer {
 
     private void rebuildButtons() {
         buttonList.clear();
+        tradeButton = null;
+        popupApplyButton = null;
         if (popupSlot >= 0) {
             buttonList.add(new GuiButton(30, guiLeft + 23, guiTop + 83, 130, 20,
                     tr("nbt", (machine.view.matchNbt & (1 << popupSlot)) != 0 ? tr("yes") : tr("no"))));
-            buttonList.add(new GuiButton(31, guiLeft + 23, guiTop + 107, 63, 20, tr("apply")));
+            popupApplyButton = new GuiButton(31, guiLeft + 23, guiTop + 107, 63, 20, tr("apply"));
+            buttonList.add(popupApplyButton);
             buttonList.add(new GuiButton(32, guiLeft + 90, guiTop + 107, 63, 20, tr("clear")));
             if (popupSlot < 4) {
                 String selected = OreFilters.oreName(machine.view.templates[popupSlot]);
@@ -96,7 +100,8 @@ public final class GuiMachine extends GuiContainer {
                         tr("creative", machine.view.creative ? tr("yes") : tr("no"))));
             }
         } else {
-            buttonList.add(new GuiButton(1, guiLeft + 100, guiTop + 60, 70, 20, tr("trade")));
+            tradeButton = new GuiButton(1, guiLeft + 100, guiTop + 60, 70, 20, tr("trade"));
+            buttonList.add(tradeButton);
         }
         updateButtonAccess();
     }
@@ -239,7 +244,8 @@ public final class GuiMachine extends GuiContainer {
         nameField.setFocused(false);
         quantityField = new GuiTextField(3, fontRenderer, guiLeft + 86, guiTop + 61, 65, 16);
         quantityField.setMaxStringLength(4);
-        quantityField.setValidator(s -> s.isEmpty() || s.matches("[0-9]{1,4}"));
+        quantityField.setValidator(s -> s.isEmpty() || (s.matches("[0-9]{1,4}")
+                && Integer.parseInt(s) <= com.tom.trading.tile.TileVendingMachine.MAX_QUANTITY));
         quantityField.setText(Integer.toString(machine.view.quantities[slot]));
         quantityField.setFocused(true);
         rebuildButtons();
@@ -314,19 +320,21 @@ public final class GuiMachine extends GuiContainer {
         }
         if (popupSlot >= 0) {
             if (key == Keyboard.KEY_ESCAPE) closePopup();
-            else if (key == Keyboard.KEY_RETURN) actionPerformed(buttonList.get(1));
+            else if ((key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER)
+                    && !Keyboard.isRepeatEvent() && popupApplyButton != null) actionPerformed(popupApplyButton);
             else quantityField.textboxKeyTyped(character, key);
             return;
         }
         if (nameField != null && nameField.isFocused()) {
-            if (key == Keyboard.KEY_ESCAPE || key == Keyboard.KEY_RETURN) {
+            if (key == Keyboard.KEY_ESCAPE || key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER) {
                 if (nameDirtyAt >= 0) sendName();
                 nameField.setFocused(false);
             } else if (nameField.textboxKeyTyped(character, key)) nameDirtyAt = tick;
             return;
         }
         if (batchField != null && batchField.isFocused() && key != Keyboard.KEY_ESCAPE) {
-            if (key == Keyboard.KEY_RETURN) actionPerformed(buttonList.get(0));
+            if ((key == Keyboard.KEY_RETURN || key == Keyboard.KEY_NUMPADENTER)
+                    && !Keyboard.isRepeatEvent() && tradeButton != null) actionPerformed(tradeButton);
             else batchField.textboxKeyTyped(character, key);
             return;
         }

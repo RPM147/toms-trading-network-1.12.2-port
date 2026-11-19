@@ -98,4 +98,27 @@ public class RemoteNetworkTest {
         assertFalse(budget.admit(now, 0).accepted);
         assertTrue(budget.admitRemoteOpen(now + 1_000_000_000L).accepted);
     }
+    @Test public void remoteOpenAndBookBudgetsEmitBoundedRejectionsWithoutCrossChannelStarvation() {
+        RequestBudget budget = new RequestBudget(); long now = 10_000_000_000L;
+        assertTrue(budget.admitDirectory(now).accepted); assertTrue(budget.admitDirectory(now).accepted);
+        assertFalse(budget.admitDirectory(now).accepted);
+        assertTrue(budget.admitBook(now).accepted); assertTrue(budget.admitBook(now).accepted);
+        for (int i = 0; i < 6; i++) {
+            RequestBudget.Admission rejected = budget.admitBook(now);
+            assertFalse(rejected.accepted);
+            assertEquals(i < 4, rejected.notifyRejection);
+        }
+        assertTrue(budget.admitRemoteOpen(now).accepted); assertTrue(budget.admitRemoteOpen(now).accepted);
+        for (int i = 0; i < 6; i++) {
+            RequestBudget.Admission rejected = budget.admitRemoteOpen(now);
+            assertFalse(rejected.accepted);
+            assertEquals(i < 4, rejected.notifyRejection);
+        }
+        RequestBudget globalFull = new RequestBudget();
+        for (int i = 0; i < 40; i++) assertTrue(globalFull.admit(now, 0).accepted);
+        RequestBudget.Admission bookGlobal = globalFull.admitBook(now);
+        assertFalse(bookGlobal.accepted); assertTrue(bookGlobal.notifyRejection);
+        assertTrue(budget.admitBook(now + 1_000_000_000L).accepted);
+        assertTrue(budget.admitRemoteOpen(now + 1_000_000_000L).accepted);
+    }
 }

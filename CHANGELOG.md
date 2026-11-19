@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.3.4-port.18-dev — Phase 1 stabilization (2026-11-19)
+
+- **Rate-limit quota isolation & bounded busy replies:**
+  - Separated `RequestBudget` sub-limits for directory browsing (`admitDirectory`),
+    remote opens (`admitRemoteOpen`), and trade-book actions (`admitBook`) while
+    preserving the shared 40-request/second global ceiling.
+  - Added bounded rejection feedback (`DirectoryPage.Result.BUSY`,
+    `TradeBookNetwork.Result.BUSY`, `RemoteOpenResult.BUSY`, and `book.busy`
+    when binding) up to 4 notices per window, preventing 15-second client lockups.
+  - Added client-side directory reopen spacing (`DirectoryClientState` /
+    `GuiMachineDirectory`) so closing and immediately reopening the directory on
+    the same connection respects the 550 ms request interval.
+  - Added `gui.toms_trading_network.book.busy` translations in `en_us.lang`,
+    `tr_tr.lang`, and `es_mx.lang`.
+- **Remote open/cancel queue race & leak fix:**
+  - Split `RemoteNetwork` queuing into separate `QUEUED_OPEN` and `QUEUED_CANCEL`
+    sets so a queued open no longer drops an immediate cancel packet.
+  - Wrapped `addScheduledTask` in a `try/catch` to release queue membership if task
+    scheduling fails.
+- **Trade book item NBT slimming:**
+  - Stopped writing up to 24 KiB of cached `pages` NBT into held `WRITABLE_BOOK`
+    items on bind/open (`TradeBooks`), avoiding redundant slot resyncs and
+    Shulker Box NBT bloat. Legacy `port.17` books have cached `pages` stripped
+    on first read while preserving the server-issued `TTNTradeBook` binding.
+- **Trade book diagnostics & orphan cleanup:**
+  - Logged corrupt/unsupported `ttn_trade_books` NBT failures in `TradeBookData`
+    instead of silently ignoring them, while continuing to preserve unknown payloads.
+  - Added `TradeBookData.revoke`, `pruneAbsent`, and capacity counters, exposed via
+    level-2 commands `/ttndirectory books status`, `/ttndirectory books prune`, and
+    `/ttndirectory books revoke <machine-uuid>`.
+- **Core safety, GUI polish & release verification:**
+  - Guarded `CommonEvents.onBlockBreak` against null `event.getPlayer()` on
+    quarantined machines.
+  - Bounded `GuiMachine` offer quantity input to `<= 1024`, added `KEY_NUMPADENTER`
+    and repeat-event guards, and replaced fragile `buttonList` index lookups.
+  - Updated `verifyReleaseArtifact` `requiredEntries` in `build.gradle` to check
+    all `port.16` and `port.17` production classes.
+- **Exact-version parity:** Bumped version to `0.3.4-port.18-dev` due to the
+  `TradeBookNetwork.Result.BUSY` wire addition.
+- **Planned for Phase 2 (`0.3.4-port.18` final):** Complete `tr_tr.lang` core keys
+  and localized chat receipt components; preserve page/scroll/selection on favorite
+  toggles; enrich `/ttndirectory special list` with machine metadata + `special prune`;
+  and apply low-risk source-level performance refinements.
+
 ## 0.3.4-port.17 — Machine-bound trade books
 
 - Added opt-in machine ledgers: Shift-right-click an owned Vending Machine with

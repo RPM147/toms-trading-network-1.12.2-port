@@ -50,6 +50,7 @@ public final class TradeBookClient {
             ItemStack held = mc.player.getHeldItem(response.request.hand);
             if (!TradeBooks.marked(held) || !opening.accept(response, TradeBookBinding.read(held.getTagCompound()),
                     mc.player.dimension, System.nanoTime())) return;
+            if (response.result == TradeBookNetwork.Result.BUSY) { message(mc, "busy"); return; }
             if (response.result != TradeBookNetwork.Result.OK) { message(mc, "unavailable"); return; }
             List<String> rows = response.rows.isEmpty() ? Collections.singletonList(I18n.format("gui.toms_trading_network.book.empty")) : response.rows;
             String buyerCaption = I18n.format("gui.toms_trading_network.book.buyer");

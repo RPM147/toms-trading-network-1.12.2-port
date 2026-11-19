@@ -25,7 +25,7 @@ public final class DirectoryCommand extends CommandBase {
     @Override public String getName() { return "ttndirectory"; }
     @Override public int getRequiredPermissionLevel() { return 2; }
     @Override public String getUsage(ICommandSender sender) {
-        return "/ttndirectory status | export | import <file.json> | reindex | renew <dim> <x> <y> <z> | special add <dim> <x> <y> <z> | special remove <uuid> | special list [page]";
+        return "/ttndirectory status | export | import <file.json> | reindex | renew <dim> <x> <y> <z> | special add <dim> <x> <y> <z> | special remove <uuid> | special list [page] | books status | books prune | books revoke <uuid>";
     }
     @Override public void execute(MinecraftServer server, ICommandSender sender, String[] args) throws CommandException {
         // Also enforce on direct execution, before touching any world or persisted membership.
@@ -45,6 +45,10 @@ public final class DirectoryCommand extends CommandBase {
             switch (args[0]) {
                 case "special": {
                     special(sender, args, data);
+                    return;
+                }
+                case "books": {
+                    books(sender, args, overworld, data);
                     return;
                 }
                 case "export": {
@@ -140,9 +144,55 @@ public final class DirectoryCommand extends CommandBase {
                 sender.sendMessage(new TextComponentString(ids.get(i).toString()));
         } else throw new WrongUsageException(getUsage(sender));
     }
+    private void books(ICommandSender sender, String[] args, WorldServer overworld, MachineDirectoryData data)
+            throws CommandException, IOException {
+        com.tom.trading.book.TradeBookData bookData = com.tom.trading.book.TradeBooks.getExisting(overworld);
+        if (args.length == 2 && args[1].equals("status")) {
+            if (bookData == null) {
+                sender.sendMessage(new TextComponentString("TTN trade books: no ledger file created yet."));
+                return;
+            }
+            if (!bookData.isSupported()) {
+                sender.sendMessage(new TextComponentString("TTN trade books: supported=false (corrupt or future data preserved)."));
+                return;
+            }
+            boolean worldMatches = bookData.supports(data.getWorldId());
+            String orphaned = worldMatches
+                    ? Integer.toString(bookData.countAbsent(data::containsIdentity))
+                    : "unknown (world UUID mismatch)";
+            sender.sendMessage(new TextComponentString("TTN trade books: supported=true, worldMatch=" + worldMatches
+                    + ", machines=" + bookData.machineCount() + "/" + com.tom.trading.book.TradeBookData.MAX_MACHINES
+                    + ", records=" + bookData.recordCount() + "/" + com.tom.trading.book.TradeBookData.MAX_RECORDS
+                    + ", characters=" + bookData.characterCount() + "/" + com.tom.trading.book.TradeBookData.MAX_CHARACTERS
+                    + ", orphaned=" + orphaned));
+        } else if (args.length == 2 && args[1].equals("prune")) {
+            if (bookData == null) {
+                sender.sendMessage(new TextComponentString("TTN trade books: 0 orphaned machine ledgers removed (no ledger file)."));
+                return;
+            }
+            if (!bookData.supports(data.getWorldId())) {
+                throw new IOException("Trade book data is unavailable or does not match this world");
+            }
+            int removed = bookData.pruneAbsent(data::containsIdentity);
+            sender.sendMessage(new TextComponentString("TTN trade books: removed " + removed + " orphaned machine ledger(s)."));
+        } else if (args.length == 3 && args[1].equals("revoke")) {
+            UUID id = UUID.fromString(args[2]);
+            if (!id.toString().equalsIgnoreCase(args[2])) throw new IllegalArgumentException("Use a full canonical machine UUID");
+            if (bookData == null) {
+                sender.sendMessage(new TextComponentString("TTN trade books: " + id + " is not tracked (no ledger file)."));
+                return;
+            }
+            if (!bookData.supports(data.getWorldId())) {
+                throw new IOException("Trade book data is unavailable or does not match this world");
+            }
+            sender.sendMessage(new TextComponentString("TTN trade books: " + id
+                    + (bookData.revoke(id) ? " revoked; bound books for this machine can no longer read history." : " is not tracked.")));
+        } else throw new WrongUsageException(getUsage(sender));
+    }
     @Override public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args, @Nullable BlockPos pos) {
-        if (args.length == 1) return getListOfStringsMatchingLastWord(args, "status", "export", "import", "reindex", "renew", "special");
+        if (args.length == 1) return getListOfStringsMatchingLastWord(args, "status", "export", "import", "reindex", "renew", "special", "books");
         if (args.length == 2 && args[0].equals("special")) return getListOfStringsMatchingLastWord(args, "add", "remove", "list");
+        if (args.length == 2 && args[0].equals("books")) return getListOfStringsMatchingLastWord(args, "status", "prune", "revoke");
         return java.util.Collections.emptyList();
     }
     private static Path exchangeFolder(WorldServer overworld) throws IOException {

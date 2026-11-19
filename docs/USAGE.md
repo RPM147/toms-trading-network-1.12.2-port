@@ -170,16 +170,40 @@ pages, so unusually long/multi-item entries can reduce the visible history.
 Only this recent history is retained; a new book cannot restore evicted records.
 
 Book bindings and history use `<world>/data/ttn_trade_books.dat`, saved through
-Minecraft's normal world saves. Keep the complete world, including player/book
-items and this data, in backups. The file contains book access keys and buyer/
-seller information; do not publish it. Unsupported or corrupt data fails closed
-rather than silently replacing it. Sudden crashes can lose unsaved entries;
-the book is not a crash-atomic financial ledger.
+Minecraft's normal world saves. Since `0.3.4-port.18-dev` (2026-11-19), the held
+item stores only the binding marker and tooltip metadata rather than caching
+up to 24 KiB of `pages` NBT in the book item; older bound books have cached
+`pages` stripped automatically when opened. If you bind or open books faster than
+the server's rate limit allows, a `busy` status message appears immediately rather
+than stalling; wait briefly and retry. Keep the complete world, including
+player/book items and this data, in backups. The file contains book access keys
+and buyer/seller information; do not publish it. Unsupported or corrupt data fails
+closed rather than silently replacing it (logging an error to the server console).
+Sudden crashes can lose unsaved entries; the book is not a crash-atomic
+financial ledger.
 
 The separate JSONL transaction log and public announcements remain independent:
 disabling either does not disable bound-book recording. Archive JSONL files
-elsewhere before rotation if you need longer history. Install the same port.17
+elsewhere before rotation if you need longer history. Install the exact same port
 JAR on the host/server and every client; no manual config change is required.
+
+### Trade book maintenance commands
+
+Level-2 administrator commands for `ttn_trade_books`:
+
+```text
+/ttndirectory books status
+/ttndirectory books prune
+/ttndirectory books revoke <machine-uuid>
+```
+
+- `status`: Shows tracked machines, retained entries, character usage and how many
+  tracked machine UUIDs are no longer in the directory.
+- `prune`: Removes tracked book keys and retained entries for machines absent from
+  the directory (for example, broken machines), without affecting active machines.
+- `revoke <machine-uuid>`: Invalidates an active or orphaned machine's ledger key
+  and clears its retained history. Existing held books for that machine become
+  unreadable; the owner can still bind a fresh book later to start a new ledger.
 
 ## Shared tab (Currency & Tax by default)
 

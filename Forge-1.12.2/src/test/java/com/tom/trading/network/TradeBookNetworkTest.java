@@ -37,4 +37,17 @@ public class TradeBookNetworkTest {
         ByteBuf bytes = Unpooled.buffer().writeZero(TradeBookNetwork.RESPONSE_BYTES + 1);
         try { TradeBookNetwork.Opened oversized = new TradeBookNetwork.Opened(); oversized.fromBytes(bytes); assertFalse(oversized.valid); } finally { bytes.release(); }
     }
+    @Test public void busyResponseRoundTripsWithoutBindingAndRejectsRows() {
+        ByteBuf bytes = Unpooled.buffer();
+        try {
+            new TradeBookNetwork.Opened(query(), null, TradeBookNetwork.Result.BUSY, Collections.emptyList()).toBytes(bytes);
+            TradeBookNetwork.Opened decoded = new TradeBookNetwork.Opened(); decoded.fromBytes(bytes);
+            assertTrue(decoded.valid); assertNull(decoded.binding);
+            assertEquals(TradeBookNetwork.Result.BUSY, decoded.result); assertTrue(decoded.rows.isEmpty());
+        } finally { bytes.release(); }
+        try {
+            new TradeBookNetwork.Opened(query(), null, TradeBookNetwork.Result.BUSY, Collections.singletonList("unexpected"));
+            fail("BUSY response accepted non-empty rows");
+        } catch (IllegalArgumentException expected) { }
+    }
 }

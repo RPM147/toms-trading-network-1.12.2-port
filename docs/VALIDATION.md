@@ -1,5 +1,37 @@
 # Validation scope and source preparation
 
+## Port.18-dev Phase 1 stabilization — 2026-11-19
+
+- Java 8 compilation, full JUnit test execution, reobfuscation, release packaging
+  and `verifyReleaseArtifact` passed on Windows using existing caches and
+  process-local 512 MiB heaps (`_JAVA_OPTIONS=-Xms64m -Xmx512m -XX:CICompilerCount=2`,
+  `--max-workers=1`). Pinned optional API JARs were read only; no live world or
+  running game server was modified or launched.
+- **Full automated suite: 295 JUnit tests in 53 classes passed**, with no
+  failures, errors or skips (`cleanTest test`).
+- New and extended Phase 1 coverage includes:
+  - `DirectoryNetworkTest` (13), `RemoteNetworkTest` (9), `TradeBookNetworkTest` (4):
+    independent directory/remote-open/book sub-budgets, bounded rejection notices
+    (up to 4/s), global 40/s ceiling enforcement, and wire round-trip validation
+    for `BUSY` replies.
+  - `DirectoryClientStateTest` (9), `TradeBookClientTest` (7): reopened directory
+    spacing preservation and immediate unlock on `BUSY` replies.
+  - `TradeBookDataTest` (9): `revoke`, `pruneAbsent`, counter consistency, and
+    stripping legacy cached `pages` from bound books via `TradeBooks.stripCachedPages`.
+  - `MachineAccessTest` (9): quarantined `BlockEvent.BreakEvent` with null
+    `getPlayer()` cancelling without `NullPointerException`.
+  - `BuildInfoTest` (3), `Phase7ResourcesTest` (5): exact `0.3.4-port.18-dev`
+    peer checks (including rejecting `0.3.4-port.17`) and `book.busy` localization
+    across `en_us`, `tr_tr`, and `es_mx`.
+- `verifyReleaseArtifact` now verifies all `port.16`, `port.17`, and `port.18-dev`
+  classes inside the reobfuscated JAR.
+- Artifact: `toms_trading_network-1.12.2-0.3.4-port.18-dev.jar`, **404065 bytes**.
+- SHA-256: `7bf8751be5f3c7e672c7f2a058470b9e3c65133fb67db6388780c001eabd276d`.
+- Pending manual acceptance: in-game GUI/input checks (`GuiMachine` quantity
+  popup & Numpad Enter, directory rapid reopen, book bind/open busy recovery,
+  `/ttndirectory books status | prune | revoke`), plus earlier pending multiplayer
+  save/restart and GUI-scale visual checks from `port.14`–`port.17`.
+
 ## Port.17 machine-bound trade books — 2026-10-05
 
 - Java 8 compilation, reobfuscation, release packaging and `verifyReleaseArtifact`

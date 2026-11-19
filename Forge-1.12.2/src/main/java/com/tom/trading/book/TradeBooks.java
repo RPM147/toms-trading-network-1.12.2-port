@@ -10,7 +10,6 @@ import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTTagString;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.text.TextComponentTranslation;
@@ -62,11 +61,11 @@ public final class TradeBooks {
         try {
             TradeBookBinding binding = data.bind(machine.getMachineUuid());
             NBTTagCompound tag = book.hasTagCompound() ? book.getTagCompound().copy() : new NBTTagCompound();
+            tag.removeTag("pages");
             tag.setString("TTNBookMachineName", machine.hasCustomName() ? com.tom.trading.directory.DirectoryText.label(machine.getName()) : "");
             tag.setString("TTNBookOwner", com.tom.trading.directory.DirectoryText.label(player.getName()));
             tag.setString("TTNBookAddress", player.dimension + " / " + machine.getPos().getX() + ", " + machine.getPos().getY() + ", " + machine.getPos().getZ());
             binding.write(tag); book.setTagCompound(tag);
-            snapshot(book, data.snapshot(binding));
             player.inventory.markDirty(); player.inventoryContainer.detectAndSendChanges();
             status(player, "bound");
         } catch (IllegalStateException full) { status(player, "capacity"); }
@@ -80,15 +79,18 @@ public final class TradeBooks {
         MachineDirectoryData directory = MachineDirectory.get(player.getServerWorld());
         if (data == null || directory == null || !directory.isSupported() || !data.supports(directory.getWorldId()) || !data.accepts(binding))
             throw new IllegalArgumentException("Book unavailable");
-        List<String> rows = data.snapshot(binding); snapshot(book, rows);
-        player.inventory.markDirty(); player.inventoryContainer.detectAndSendChanges(); return rows;
+        List<String> rows = data.snapshot(binding);
+        if (stripCachedPages(book)) {
+            player.inventory.markDirty(); player.inventoryContainer.detectAndSendChanges();
+        }
+        return rows;
     }
-    private static void snapshot(ItemStack book, List<String> rows) {
-        NBTTagList pages = new NBTTagList();
-        for (String row : rows) pages.appendTag(new NBTTagString(row));
-        if (rows.isEmpty()) pages.appendTag(new NBTTagString(""));
-        book.setTagInfo("pages", pages);
+    static boolean stripCachedPages(ItemStack book) {
+        if (!marked(book) || !book.getTagCompound().hasKey("pages")) return false;
+        book.getTagCompound().removeTag("pages");
+        return true;
     }
+    public static TradeBookData getExisting(WorldServer world) { return get(world, false); }
     public static void record(MinecraftServer server, TradeReceipt receipt) {
         if (server == null || server.getWorld(0) == null) return;
         TradeBookData data = get(server.getWorld(0), false);

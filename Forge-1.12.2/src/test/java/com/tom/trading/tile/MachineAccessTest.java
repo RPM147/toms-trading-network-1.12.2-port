@@ -172,6 +172,25 @@ public class MachineAccessTest {
         assertEquals(before, tile.writePortData(new NBTTagCompound()));
     }
 
+    @Test public void quarantinedBreakEventWithNullPlayerCancelsWithoutThrowing() {
+        NBTTagCompound tag = tile.writePortData(new NBTTagCompound());
+        tag.getCompoundTag("AutomationTransfer").setBoolean("Quarantined", true);
+        tile.readPortData(tag);
+        assertTrue(tile.isAutomationQuarantined());
+        BlockEvent.BreakEvent nullPlayerEvent = new BlockEvent.BreakEvent(world, POSITION, Blocks.STONE.getDefaultState(), owner) {
+            @Override public boolean isCancelable() { return true; }
+            @Override public EntityPlayer getPlayer() { return null; }
+        };
+        CommonEvents.onBlockBreak(nullPlayerEvent);
+        assertTrue(nullPlayerEvent.isCanceled());
+
+        BlockEvent.BreakEvent ownerEvent = new BlockEvent.BreakEvent(world, POSITION, Blocks.STONE.getDefaultState(), owner) {
+            @Override public boolean isCancelable() { return true; }
+        };
+        CommonEvents.onBlockBreak(ownerEvent);
+        assertTrue(ownerEvent.isCanceled());
+    }
+
     private TestPlayer player(String name, int id, boolean commands) {
         return new TestPlayer(world, new GameProfile(new UUID(0, id), name), commands);
     }

@@ -85,9 +85,15 @@ public final class MachineNetwork {
         }
     }
 
-    static boolean acceptDirectory(EntityPlayerMP player) {
+    static RequestBudget.Admission admitDirectory(EntityPlayerMP player) {
         synchronized (BUDGETS) {
-            return BUDGETS.computeIfAbsent(player, p -> new RequestBudget()).admitDirectory(System.nanoTime()).accepted;
+            return BUDGETS.computeIfAbsent(player, p -> new RequestBudget()).admitDirectory(System.nanoTime());
+        }
+    }
+
+    static RequestBudget.Admission admitBook(EntityPlayerMP player) {
+        synchronized (BUDGETS) {
+            return BUDGETS.computeIfAbsent(player, p -> new RequestBudget()).admitBook(System.nanoTime());
         }
     }
 

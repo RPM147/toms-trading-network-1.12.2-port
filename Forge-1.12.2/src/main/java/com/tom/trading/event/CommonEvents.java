@@ -25,8 +25,10 @@ public final class CommonEvents {
             TileVendingMachine machine = (TileVendingMachine) tileEntity;
             if (machine.isAutomationQuarantined()) {
                 event.setCanceled(true);
-                event.getPlayer().sendStatusMessage(new TextComponentTranslation(
-                        "gui.toms_trading_network.automation_quarantined"), false);
+                if (event.getPlayer() != null) {
+                    event.getPlayer().sendStatusMessage(new TextComponentTranslation(
+                            "gui.toms_trading_network.automation_quarantined"), false);
+                }
             } else if (machine.isAutomationRunning() || !machine.canConfigure(event.getPlayer())) {
                 event.setCanceled(true);
             }

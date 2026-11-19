@@ -1,18 +1,22 @@
 package com.tom.trading.book;
 
+import com.tom.trading.BuildInfo;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
-import net.minecraft.nbt.NBTTagString;
 import net.minecraft.world.storage.WorldSavedData;
 import net.minecraftforge.common.util.Constants;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Predicate;
 
 /** Save-owned opt-in ledgers with bounded retention and no TileEntity/chunk references. Server thread only. */
 public final class TradeBookData extends WorldSavedData {
     public static final String NAME = "ttn_trade_books";
     public static final int MAX_MACHINES = 4096, PER_MACHINE = 100, MAX_RECORDS = 8192;
     public static final int MAX_CHARACTERS = 2_000_000, MAX_ENTRY = 8192, SNAPSHOT_BYTES = 24 * 1024;
+    private static final Logger LOGGER = LogManager.getLogger(BuildInfo.MOD_ID);
     private UUID world;
     private boolean supported;
     private NBTTagCompound preserved;
@@ -26,7 +30,40 @@ public final class TradeBookData extends WorldSavedData {
         TradeBookData data = new TradeBookData(NAME); data.world = Objects.requireNonNull(world);
         data.supported = true; data.markDirty(); return data;
     }
+    public boolean isSupported() { return supported; }
     public boolean supports(UUID expectedWorld) { return supported && Objects.equals(world, expectedWorld); }
+    public int machineCount() { return keys.size(); }
+    public int recordCount() { return records.size(); }
+    public int characterCount() { return characters; }
+    public int countAbsent(Predicate<UUID> present) {
+        Objects.requireNonNull(present);
+        if (!supported) return 0;
+        int absent = 0;
+        for (UUID machine : keys.keySet()) if (!present.test(machine)) absent++;
+        return absent;
+    }
+    public boolean revoke(UUID machine) {
+        requireSupported();
+        if (machine == null || keys.remove(machine) == null) return false;
+        ArrayDeque<Long> entries = index.remove(machine);
+        if (entries != null) {
+            for (Long id : entries) {
+                Record removed = records.remove(id);
+                if (removed != null) characters -= removed.text.length();
+            }
+        }
+        markDirty();
+        return true;
+    }
+    public int pruneAbsent(Predicate<UUID> present) {
+        requireSupported();
+        Objects.requireNonNull(present);
+        List<UUID> absent = new ArrayList<>();
+        for (UUID machine : keys.keySet()) if (!present.test(machine)) absent.add(machine);
+        int removed = 0;
+        for (UUID machine : absent) if (revoke(machine)) removed++;
+        return removed;
+    }
     public TradeBookBinding bind(UUID machine) {
         requireSupported(); Objects.requireNonNull(machine);
         UUID key = keys.get(machine);
@@ -100,7 +137,11 @@ public final class TradeBookData extends WorldSavedData {
                 entries.addLast(++sequence); records.put(sequence, new Record(machine, text)); characters += text.length();
             }
             world = tag.getUniqueId("World"); supported = true; preserved = null;
-        } catch (RuntimeException invalid) { keys.clear(); index.clear(); records.clear(); characters = 0; }
+        } catch (RuntimeException invalid) {
+            keys.clear(); index.clear(); records.clear(); characters = 0;
+            LOGGER.error("Refusing to interpret trade book data ({}); original payload will be preserved unchanged.",
+                    invalid.getMessage(), invalid);
+        }
     }
     private static NBTTagList list(NBTTagCompound tag, String key) {
         if (!tag.hasKey(key, Constants.NBT.TAG_LIST)) throw new IllegalArgumentException("Missing book list");

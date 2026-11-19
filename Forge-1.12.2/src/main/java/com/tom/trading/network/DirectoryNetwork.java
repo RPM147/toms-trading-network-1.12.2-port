@@ -126,7 +126,14 @@ public final class DirectoryNetwork {
             if (!message.valid) return null;
             EntityPlayerMP player = ctx.getServerHandler().player;
             synchronized (QUEUED) {
-                if (QUEUED.contains(player) || !MachineNetwork.acceptDirectory(player)) return null;
+                if (QUEUED.contains(player)) return null;
+                RequestBudget.Admission admission = MachineNetwork.admitDirectory(player);
+                if (!admission.accepted) {
+                    return admission.notifyRejection
+                            ? new Page(new DirectoryPage(message.query, DirectoryPage.Result.BUSY, null, 0, 0,
+                            false, Collections.emptyList()).withSpecialTabName(RemoteSettings.specialTabLabel()))
+                            : null;
+                }
                 QUEUED.add(player);
             }
             try {

@@ -108,4 +108,16 @@ public class DirectoryClientStateTest {
         }
         assertFalse(state.waiting()); assertEquals("stale", state.status()); assertNull(state.poll(NOW + 30_000_000_000L));
     }
+    @Test public void reopenedDirectoryRespectsSpacingAndBusyReplyClearsWaiting() {
+        DirectoryClientState state = new DirectoryClientState(0, NOW, NOW + 550_000_000L);
+        assertNull(state.poll(NOW));
+        assertNull(state.poll(NOW + 549_999_999L));
+        DirectoryQuery query = state.poll(NOW + 550_000_000L);
+        assertNotNull(query);
+        assertTrue(state.waiting());
+        assertTrue(state.accept(new DirectoryPage(query, DirectoryPage.Result.BUSY, null, 0, 0, false, Collections.emptyList()),
+                NOW + 600_000_000L));
+        assertFalse(state.waiting());
+        assertEquals("busy", state.status());
+    }
 }

@@ -16,14 +16,15 @@ import java.util.*;
 /** Held-item authority only. Clients cannot request a machine UUID, token, arbitrary NBT or another player's history. */
 public final class TradeBookNetwork {
     public static final int REQUEST_BYTES = 21, RESPONSE_BYTES = 32 * 1024;
-    public enum Result { OK, UNAVAILABLE }
+    public enum Result { OK, UNAVAILABLE, BUSY }
     private static final Set<EntityPlayerMP> QUEUED = Collections.newSetFromMap(new WeakHashMap<>());
     private TradeBookNetwork() {}
     static int register(SimpleNetworkWrapper channel, int id) {
         channel.registerMessage(OpenHandler.class, Open.class, id++, Side.SERVER);
         channel.registerMessage(OpenedHandler.class, Opened.class, id++, Side.CLIENT); return id;
     }
-    public static boolean accept(EntityPlayerMP player) { return MachineNetwork.acceptDirectory(player); }
+    public static RequestBudget.Admission admit(EntityPlayerMP player) { return MachineNetwork.admitBook(player); }
+    public static boolean accept(EntityPlayerMP player) { return admit(player).accepted; }
     public static void request(Open request) { MachineNetwork.CHANNEL.sendToServer(request); }
     public static final class Open implements IMessage {
         public UUID requestId;
@@ -102,7 +103,14 @@ public final class TradeBookNetwork {
         @Override public IMessage onMessage(Open request, MessageContext context) {
             if (!request.valid) return null;
             EntityPlayerMP player = context.getServerHandler().player;
-            synchronized (QUEUED) { if (QUEUED.contains(player) || !accept(player)) return null; QUEUED.add(player); }
+            synchronized (QUEUED) {
+                if (QUEUED.contains(player)) return null;
+                RequestBudget.Admission admission = admit(player);
+                if (!admission.accepted) {
+                    return admission.notifyRejection ? new Opened(request, null, Result.BUSY, Collections.emptyList()) : null;
+                }
+                QUEUED.add(player);
+            }
             try {
                 player.getServerWorld().addScheduledTask(() -> {
                     try {

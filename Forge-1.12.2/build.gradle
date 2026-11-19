@@ -18,7 +18,7 @@ buildscript {
 
 apply plugin: 'net.minecraftforge.gradle'
 
-version = '0.3.4-port.17'
+version = '0.3.4-port.18-dev'
 group = 'com.tom.trading'
 archivesBaseName = 'toms_trading_network-1.12.2'
 
@@ -330,10 +330,22 @@ tasks.register('verifyReleaseArtifact') {
                 'com/tom/trading/client/DirectoryPreviewLayout.class',
                 'com/tom/trading/directory/DirectoryCommand.class',
                 'com/tom/trading/directory/DirectoryImport.class',
+                'com/tom/trading/directory/PlayerFavorites.class',
                 'com/tom/trading/network/DirectoryNetwork.class',
                 'com/tom/trading/network/RemoteNetwork.class',
+                'com/tom/trading/network/TradeBookNetwork.class',
                 'com/tom/trading/client/GuiMachineDirectory.class',
                 'com/tom/trading/client/GuiRemoteTrading.class',
+                'com/tom/trading/client/PurchaseTotals.class',
+                'com/tom/trading/client/PurchaseTotalsDisplay.class',
+                'com/tom/trading/client/TradeBookClient.class',
+                'com/tom/trading/client/TradeBookClientState.class',
+                'com/tom/trading/client/TradeBookPages.class',
+                'com/tom/trading/client/TradeBookTooltip.class',
+                'com/tom/trading/book/TradeBookBinding.class',
+                'com/tom/trading/book/TradeBookData.class',
+                'com/tom/trading/book/TradeBookEvents.class',
+                'com/tom/trading/book/TradeBooks.class',
                 'com/tom/trading/container/ContainerRemoteTrading.class',
                 'com/tom/trading/remote/RemoteTrading.class',
                 'com/tom/trading/remote/RemoteSession.class',
@@ -343,6 +355,10 @@ tasks.register('verifyReleaseArtifact') {
                 'com/tom/trading/remote/ProtectionCoverage$Bounds.class',
                 'com/tom/trading/remote/RemoteAccess.class',
                 'com/tom/trading/remote/RemoteSettings.class',
+                'com/tom/trading/trade/RotatingTradeLog.class',
+                'com/tom/trading/trade/TradeBookEntry.class',
+                'com/tom/trading/trade/TradeLogEntry.class',
+                'com/tom/trading/trade/TradeTransactionLog.class',
                 'com/tom/trading/trade/TradeRequestLedger.class',
                 'com/tom/trading/trade/TradeCompletion.class',
                 'com/tom/trading/trade/TradeReceipt.class',

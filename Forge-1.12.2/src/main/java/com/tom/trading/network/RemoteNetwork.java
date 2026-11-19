@@ -18,7 +18,8 @@ import java.util.*;
 
 /** Separate trade-only messages on the shared channel/budget. No owner/configuration operation exists here. */
 public final class RemoteNetwork {
-    private static final Set<EntityPlayerMP> QUEUED = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Set<EntityPlayerMP> QUEUED_OPEN = Collections.newSetFromMap(new WeakHashMap<>());
+    private static final Set<EntityPlayerMP> QUEUED_CANCEL = Collections.newSetFromMap(new WeakHashMap<>());
     private RemoteNetwork() {}
     static int register(SimpleNetworkWrapper channel, int id) {
         channel.registerMessage(OpenHandler.class, Open.class, id++, Side.SERVER);
@@ -177,27 +178,38 @@ public final class RemoteNetwork {
             code = TradeResultCode.values()[id];
         }
     }
-    private static void queue(Open message, MessageContext ctx, boolean cancel) {
-        if (!message.valid) return;
+    private static IMessage queue(Open message, MessageContext ctx, boolean cancel) {
+        if (!message.valid) return null;
         EntityPlayerMP player = ctx.getServerHandler().player;
-        RequestBudget.Admission admitted = cancel ? MachineNetwork.accept(player, 0) : MachineNetwork.acceptRemoteOpen(player);
-        if (!admitted.accepted) return;
-        synchronized (QUEUED) { if (!QUEUED.add(player)) return; }
-        player.getServerWorld().addScheduledTask(() -> {
-            try {
-                if (player.hasDisconnected()) return;
-                RemoteTrading service = RemoteTrading.get(player.getServer());
-                if (service != null) {
-                    if (cancel) service.cancel(player, message.request); else service.request(player, message.request);
-                } else if (!cancel) openResult(player, message.request, RemoteOpenResult.UNAVAILABLE);
-            } finally { synchronized (QUEUED) { QUEUED.remove(player); } }
-        });
+        Set<EntityPlayerMP> queue = cancel ? QUEUED_CANCEL : QUEUED_OPEN;
+        synchronized (queue) {
+            if (queue.contains(player)) return null;
+            RequestBudget.Admission admitted = cancel ? MachineNetwork.accept(player, 0) : MachineNetwork.acceptRemoteOpen(player);
+            if (!admitted.accepted) {
+                return !cancel && admitted.notifyRejection ? new Opened(message.request, RemoteOpenResult.BUSY, null) : null;
+            }
+            queue.add(player);
+        }
+        try {
+            player.getServerWorld().addScheduledTask(() -> {
+                try {
+                    if (player.hasDisconnected()) return;
+                    RemoteTrading service = RemoteTrading.get(player.getServer());
+                    if (service != null) {
+                        if (cancel) service.cancel(player, message.request); else service.request(player, message.request);
+                    } else if (!cancel) openResult(player, message.request, RemoteOpenResult.UNAVAILABLE);
+                } finally { synchronized (queue) { queue.remove(player); } }
+            });
+        } catch (RuntimeException stopped) {
+            synchronized (queue) { queue.remove(player); }
+        }
+        return null;
     }
     public static final class OpenHandler implements IMessageHandler<Open, IMessage> {
-        public IMessage onMessage(Open message, MessageContext ctx) { queue(message, ctx, false); return null; }
+        public IMessage onMessage(Open message, MessageContext ctx) { return queue(message, ctx, false); }
     }
     public static final class CancelHandler implements IMessageHandler<Cancel, IMessage> {
-        public IMessage onMessage(Cancel message, MessageContext ctx) { queue(message, ctx, true); return null; }
+        public IMessage onMessage(Cancel message, MessageContext ctx) { return queue(message, ctx, true); }
     }
     public static final class BuyHandler implements IMessageHandler<Buy, IMessage> {
         public IMessage onMessage(Buy message, MessageContext ctx) {

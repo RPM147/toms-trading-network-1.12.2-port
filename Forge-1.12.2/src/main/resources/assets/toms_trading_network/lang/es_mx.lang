@@ -147,6 +147,7 @@ gui.toms_trading_network.book.capacity=La capacidad de libros de comercio del se
 gui.toms_trading_network.book.bound=Libro vinculado. Se registrarán los intercambios completados; clic derecho para leer.
 gui.toms_trading_network.book.loading=Actualizando el libro...
 gui.toms_trading_network.book.empty=Aún no hay intercambios registrados.
+gui.toms_trading_network.book.busy=El libro de comercio está ocupado. Inténtalo en un momento.
 gui.toms_trading_network.totals.invalid_batch=Introduce una cantidad de 1 a 1024 intercambios.
 gui.toms_trading_network.totals.unavailable=La oferta actual aún no está lista.
 gui.toms_trading_network.totals.receive=Recibes:

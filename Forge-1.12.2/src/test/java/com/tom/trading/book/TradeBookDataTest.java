@@ -1,11 +1,18 @@
 package com.tom.trading.book;
 
+import net.minecraft.init.Bootstrap;
+import net.minecraft.init.Items;
+import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import java.util.*;
 import static org.junit.Assert.*;
 
 public class TradeBookDataTest {
+    @BeforeClass public static void bootstrap() { Bootstrap.register(); }
     @Test public void issuedKeyIsWorldAndMachineBoundAndNewBooksRecoverTheSameHistory() {
         UUID world = UUID.randomUUID(), machine = UUID.randomUUID(); TradeBookData data = TradeBookData.create(world);
         data.append(machine, "not tracked");
@@ -80,5 +87,40 @@ public class TradeBookDataTest {
         pages.set(0, new net.minecraft.nbt.NBTTagString("   ")); assertTrue(TradeBooks.blank(item));
         item.setString(TradeBookBinding.TAG, "unsupported"); assertFalse(TradeBooks.blank(item));
         for (String text : Arrays.asList("\nforged", "\u00a7k", "\u202Ehidden", "\uD800", "")) assertFalse(TradeBookData.validText(text));
+    }
+    @Test public void revokeAndPruneCleanTrackedLedgersAndCountersWithoutAffectingPresentMachines() {
+        UUID world = UUID.randomUUID(), keepId = UUID.randomUUID(), goneId = UUID.randomUUID();
+        TradeBookData data = TradeBookData.create(world);
+        TradeBookBinding keep = data.bind(keepId), gone = data.bind(goneId);
+        data.append(keepId, "keep-1"); data.append(goneId, "gone-1"); data.append(goneId, "gone-22");
+        assertEquals(2, data.machineCount()); assertEquals(3, data.recordCount()); assertEquals(19, data.characterCount());
+        assertEquals(1, data.countAbsent(id -> id.equals(keepId)));
+        assertEquals(1, data.pruneAbsent(id -> id.equals(keepId)));
+        assertFalse(data.accepts(gone)); assertTrue(data.accepts(keep));
+        assertEquals(1, data.machineCount()); assertEquals(1, data.recordCount()); assertEquals(6, data.characterCount());
+        assertEquals(Collections.singletonList("keep-1"), data.snapshot(keep));
+        TradeBookBinding reissued = data.bind(goneId);
+        assertNotEquals(gone.key, reissued.key);
+        assertTrue(data.snapshot(reissued).isEmpty());
+        assertTrue(data.revoke(goneId)); assertFalse(data.revoke(goneId));
+        assertEquals(1, data.machineCount()); assertEquals(1, data.recordCount()); assertEquals(6, data.characterCount());
+    }
+    @Test public void stripCachedPagesRemovesLegacyPagesFromBoundBooksOnly() {
+        TradeBookBinding binding = new TradeBookBinding(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        ItemStack bound = new ItemStack(Items.WRITABLE_BOOK);
+        NBTTagCompound tag = new NBTTagCompound();
+        binding.write(tag);
+        NBTTagList pages = new NBTTagList(); pages.appendTag(new NBTTagString("legacy row"));
+        tag.setTag("pages", pages); bound.setTagCompound(tag);
+        assertTrue(TradeBooks.stripCachedPages(bound));
+        assertFalse(bound.getTagCompound().hasKey("pages"));
+        assertEquals(binding, TradeBookBinding.read(bound.getTagCompound()));
+        assertFalse(TradeBooks.stripCachedPages(bound));
+
+        ItemStack manual = new ItemStack(Items.WRITABLE_BOOK);
+        NBTTagCompound manualTag = new NBTTagCompound();
+        manualTag.setTag("pages", pages.copy()); manual.setTagCompound(manualTag);
+        assertFalse(TradeBooks.stripCachedPages(manual));
+        assertTrue(manual.getTagCompound().hasKey("pages"));
     }
 }

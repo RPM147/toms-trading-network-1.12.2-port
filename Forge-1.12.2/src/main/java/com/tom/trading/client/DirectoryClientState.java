@@ -59,7 +59,10 @@ public final class DirectoryClientState {
                 : Math.max(0, Math.min(page.rows.size() - 1, index + direction)));
     }
 
-    public DirectoryClientState(int dimension, long now) { this.dimension = dimension; due = nextSend = now; }
+    public DirectoryClientState(int dimension, long now) { this(dimension, now, now); }
+    public DirectoryClientState(int dimension, long now, long earliestSend) {
+        this.dimension = dimension; due = now; nextSend = earliestSend;
+    }
     public String search() { return search; }
     public DirectoryTab tab() { return tab; }
     public String specialTabName() { return specialTabName; }

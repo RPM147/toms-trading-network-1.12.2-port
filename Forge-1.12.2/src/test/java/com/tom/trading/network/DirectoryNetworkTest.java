@@ -206,4 +206,25 @@ public class DirectoryNetworkTest {
         try { new DirectoryQuery(screen, 1, 0, 0, world, 1, "", DirectoryTab.ALL, null, true); fail(); }
         catch (IllegalArgumentException expected) { }
     }
+    @Test public void directoryBudgetEmitsBoundedBusyNotificationsAndBusyPageRoundTrips() {
+        long now = 10_000_000_000L; RequestBudget budget = new RequestBudget();
+        assertTrue(budget.admitDirectory(now).accepted);
+        assertTrue(budget.admitDirectory(now).accepted);
+        for (int i = 0; i < 6; i++) {
+            RequestBudget.Admission rejected = budget.admitDirectory(now);
+            assertFalse(rejected.accepted);
+            assertEquals(i < 4, rejected.notifyRejection);
+        }
+        assertTrue(budget.admitDirectory(now + 1_000_000_000L).accepted);
+        DirectoryPage busy = new DirectoryPage(query(""), DirectoryPage.Result.BUSY, null, 0, 0, false,
+                Collections.emptyList()).withSpecialTabName("Server Shops");
+        ByteBuf bytes = Unpooled.buffer();
+        try {
+            new DirectoryNetwork.Page(busy).toBytes(bytes);
+            DirectoryNetwork.Page decoded = new DirectoryNetwork.Page(); decoded.fromBytes(bytes);
+            assertTrue(decoded.valid);
+            assertEquals(DirectoryPage.Result.BUSY, decoded.page.result);
+            assertEquals("Server Shops", decoded.page.specialTabName);
+        } finally { bytes.release(); }
+    }
 }

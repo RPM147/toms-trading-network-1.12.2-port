@@ -29,6 +29,8 @@ import java.util.*;
 @SideOnly(Side.CLIENT)
 public final class GuiMachineDirectory extends GuiScreen {
     private static final String PREFIX = "gui.toms_trading_network.directory.";
+    private static INetHandler lastSendConnection;
+    private static long nextAllowedSend;
     private DirectoryClientState state;
     private INetHandler connection;
     private GuiTextField search;
@@ -84,9 +86,15 @@ public final class GuiMachineDirectory extends GuiScreen {
     @Override public void initGui() {
         if (mc.player == null || mc.world == null || mc.getConnection() == null) { mc.displayGuiScreen(null); return; }
         if (state == null) {
-            state = new DirectoryClientState(mc.player.dimension, System.nanoTime());
-            state.setTab(initialTab, System.nanoTime()); connection = mc.getConnection();
-            if (connection == bookmarkConnection) state.restore(returnBookmark, System.nanoTime());
+            long now = System.nanoTime();
+            long earliestSend = mc.getConnection() == lastSendConnection ? Math.max(now, nextAllowedSend) : now;
+            if (mc.getConnection() != lastSendConnection) {
+                lastSendConnection = null;
+                nextAllowedSend = 0;
+            }
+            state = new DirectoryClientState(mc.player.dimension, now, earliestSend);
+            state.setTab(initialTab, now); connection = mc.getConnection();
+            if (connection == bookmarkConnection) state.restore(returnBookmark, now);
         }
         int oldScroll = entries == null ? 0 : entries.getAmountScrolled();
         Keyboard.enableRepeatEvents(true);
@@ -123,10 +131,15 @@ public final class GuiMachineDirectory extends GuiScreen {
             mc.displayGuiScreen(null); return;
         }
         search.updateCursorCounter();
-        RemoteOpenRequest expired = opening.expire(System.nanoTime());
+        long now = System.nanoTime();
+        RemoteOpenRequest expired = opening.expire(now);
         if (expired != null) { RemoteNetwork.cancel(expired); openStatus = "open_timeout"; }
-        DirectoryQuery query = state.poll(System.nanoTime());
-        if (query != null) DirectoryNetwork.request(query);
+        DirectoryQuery query = state.poll(now);
+        if (query != null) {
+            lastSendConnection = connection;
+            nextAllowedSend = now + 550_000_000L;
+            DirectoryNetwork.request(query);
+        }
         updateButtons();
     }
     public boolean receiveOpen(RemoteNetwork.Opened response) {

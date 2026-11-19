@@ -29,7 +29,11 @@ public final class TradeBookEvents {
         event.setCanceled(true); event.setCancellationResult(EnumActionResult.SUCCESS);
         if (event.getWorld().isRemote || !(event.getEntityPlayer() instanceof EntityPlayerMP)) return;
         EntityPlayerMP player = (EntityPlayerMP) event.getEntityPlayer();
-        if (!TradeBookNetwork.accept(player)) return;
+        com.tom.trading.network.RequestBudget.Admission admission = TradeBookNetwork.admit(player);
+        if (!admission.accepted) {
+            if (admission.notifyRejection) TradeBooks.status(player, "busy");
+            return;
+        }
         TileEntity tile = event.getWorld().getTileEntity(event.getPos());
         if (tile instanceof TileVendingMachine) TradeBooks.bind(player, (TileVendingMachine) tile, event.getHand());
     }

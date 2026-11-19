@@ -11,9 +11,8 @@ Maintained by [RPM147](https://github.com/RPM147). Canonical source:
 
 ## Status
 
-Current package version: **0.3.4-port.17**, adding machine-bound trade books
-to transaction logs, purchase totals and personal favorites. Regular release,
-not a pre-release:
+Current `main` development version: **0.3.4-port.18-dev** (Phase 1 stabilization,
+2026-11-19). Latest tagged GitHub release remains **0.3.4-port.17**:
 [port.17 on GitHub Releases](https://github.com/RPM147/toms-trading-network-1.12.2-port/releases/tag/v0.3.4-port.17).
 Download the release JAR, not the source ZIP. This is not a CurseForge or Modrinth approval. The maintainer
 reports 5–6 hours of multiplayer use with friends of the pre-port.13 build. This is
@@ -182,6 +181,9 @@ to browse shops; they do not need administrator commands to trade.
 | `/ttndirectory special list [page]` | List selected machine UUIDs; page is optional. |
 | `/ttndirectory special remove <machine-uuid>` | Remove tab membership, not the machine or its items. |
 | `/ttndirectory status` | Show directory state and identity conflict count. |
+| `/ttndirectory books status` | Show tracked trade-book counts, character usage and orphaned ledgers. |
+| `/ttndirectory books prune` | Remove orphaned trade-book ledgers for machines absent from the directory. |
+| `/ttndirectory books revoke <machine-uuid>` | Invalidate bound trade books and clear retained history for one machine. |
 
 Replace placeholders with actual values. Dimension `0` is the Overworld. Adding
 requires the target chunk to be loaded and the machine identity to be unique;

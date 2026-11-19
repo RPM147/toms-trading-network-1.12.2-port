@@ -89,6 +89,7 @@ gui.toms_trading_network.book.capacity=Sunucunun ticaret defteri kapasitesi dolu
 gui.toms_trading_network.book.bound=Kitap bağlandı. Tamamlanan ticaretler kaydedilecek; okumak için kitaba sağ tıkla.
 gui.toms_trading_network.book.loading=Ticaret defteri güncelleniyor...
 gui.toms_trading_network.book.empty=Henüz kayıtlı ticaret yok.
+gui.toms_trading_network.book.busy=Ticaret defteri meşgul. Biraz sonra tekrar dene.
 gui.toms_trading_network.totals.invalid_batch=1 ile 1024 arasında bir işlem adedi gir.
 gui.toms_trading_network.totals.unavailable=Güncel teklif henüz hazır değil.
 gui.toms_trading_network.totals.receive=Alacakların:

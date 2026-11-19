@@ -66,4 +66,16 @@ public class TradeBookClientTest {
         List<String> pages = TradeBookPages.layout(Collections.singletonList("long"), text -> Collections.nCopies(1000, "line"));
         assertEquals(50, pages.size()); assertTrue(pages.get(49).endsWith("..."));
     }
+    @Test public void busyReplyClearsPendingLockoutImmediatelyInsteadOfWaitingForTimeout() {
+        TradeBookClientState state = new TradeBookClientState();
+        TradeBookBinding book = new TradeBookBinding(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        TradeBookNetwork.Open first = state.begin(book, 0, EnumHand.MAIN_HAND, NOW);
+        assertNotNull(first);
+        assertNull(state.begin(book, 0, EnumHand.MAIN_HAND, NOW + 600_000_000L));
+        assertTrue(state.accept(new TradeBookNetwork.Opened(first, null, TradeBookNetwork.Result.BUSY, Collections.emptyList()),
+                book, 0, NOW + 100_000_000L));
+        TradeBookNetwork.Open retry = state.begin(book, 0, EnumHand.MAIN_HAND, NOW + 600_000_000L);
+        assertNotNull(retry);
+        assertNotEquals(first.requestId, retry.requestId);
+    }
 }

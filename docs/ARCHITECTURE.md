@@ -125,6 +125,29 @@ Never weaken authorization or quotas to make an unavailable target appear usable
 - Directory/tile/preview formats remain 2/3/1. New appended book message types
   require port.17 on every peer under the existing exact-version handshake.
 
+## Port.18-dev Phase 1 updates (2026-11-19)
+
+- `RequestBudget` separates the 2/s sub-ceilings for directory queries, remote
+  opens and trade-book actions while retaining the shared 40-request/s total cap
+  and bounded rejection notices (at most four per second per sub-channel).
+  `DirectoryNetwork`, `TradeBookNetwork` and `RemoteNetwork` emit bounded `BUSY`
+  replies on rate-limit rejections instead of silently dropping requests.
+- `GuiMachineDirectory` tracks per-connection send spacing across screen reopenings
+  so rapid close/reopen does not burn the directory sub-budget.
+- `RemoteNetwork` separates `QUEUED_OPEN` and `QUEUED_CANCEL` sets and cleans up
+  queued entries if `addScheduledTask` throws, preventing dropped cancellations
+  and stuck queue entries.
+- `TradeBooks` no longer writes display `pages` back into the held `WRITABLE_BOOK`
+  `ItemStack` NBT; `TradeBookClient` renders purely from the correlated
+  `TradeBookNetwork.Opened` reply, and legacy `port.17` `pages` tags are stripped
+  on read without altering the `TTNTradeBook` bearer key.
+- `TradeBookData.readFromNBT` logs parse/validation errors before failing closed
+  and preserving unsupported payloads (`isDirty()` remains false). Operators can
+  inspect, prune orphaned ledgers or revoke machine keys via
+  `/ttndirectory books status | prune | revoke <machine-uuid>`.
+- `TradeBookNetwork.Result.BUSY` changes the wire enum, requiring `0.3.4-port.18-dev`
+  on every peer under the exact-version handshake.
+
 ## Build invariants
 
 Java 8 bytecode, pinned Forge/Gradle/mappings, no bundled optional dependencies,
